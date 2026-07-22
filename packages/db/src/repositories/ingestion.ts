@@ -9,6 +9,7 @@ import type {
 } from "../generated/prisma/client.js";
 import type { NormalizedContentInput } from "./content.js";
 import { contentRandomKey, hotRankingCoordinate } from "../feed-ranking.js";
+import { refreshContentSearchText, replaceProviderTags } from "../tags.js";
 
 const checkpointScope = "poll";
 
@@ -91,7 +92,9 @@ export async function persistIngestionPage(
   client: PrismaClient,
   input: IngestionPageInput,
   now: Date,
-): Promise<Readonly<{ created: number; updated: number }>> {
+): Promise<
+  Readonly<{ contentIds: readonly string[]; created: number; updated: number }>
+> {
   z.uuid().parse(input.sourceId);
   z.number().int().min(0).max(200).parse(input.items.length);
   return client.$transaction(
@@ -102,6 +105,7 @@ export async function persistIngestionPage(
       });
       let created = 0;
       let updated = 0;
+      const contentIds: string[] = [];
       for (const item of input.items) {
         if (item.sourceId !== input.sourceId)
           throw new TypeError("Ingestion source mismatch.");
@@ -140,6 +144,13 @@ export async function persistIngestionPage(
             where: { contentItemId: existing.contentItemId },
           });
           await createMedia(transaction, existing.contentItemId, item);
+          await replaceProviderTags(
+            transaction,
+            existing.contentItemId,
+            item.providerTags ?? [],
+          );
+          await refreshContentSearchText(transaction, existing.contentItemId);
+          contentIds.push(existing.contentItemId);
           updated += 1;
         } else {
           const contentId = randomUUID();
@@ -158,10 +169,17 @@ export async function persistIngestionPage(
             },
           });
           await createMedia(transaction, content.id, item);
+          await replaceProviderTags(
+            transaction,
+            content.id,
+            item.providerTags ?? [],
+          );
           await transaction.contentItem.update({
             data: { primarySourcePostId: occurrence.id },
             where: { id: content.id },
           });
+          await refreshContentSearchText(transaction, content.id);
+          contentIds.push(content.id);
           created += 1;
         }
       }
@@ -181,7 +199,11 @@ export async function persistIngestionPage(
           },
         });
       }
-      return Object.freeze({ created, updated });
+      return Object.freeze({
+        contentIds: Object.freeze(contentIds),
+        created,
+        updated,
+      });
     },
     { isolationLevel: "Serializable", maxWait: 5_000, timeout: 20_000 },
   );
@@ -284,6 +306,7 @@ function contentData(
     canonicalUrlHash: item.canonicalUrlHash ?? null,
     contentRating: item.contentRating,
     contentWarning: item.contentWarning ?? null,
+    duplicateAnalyzedAt: null,
     lastSeenAt: now,
     normalizedTitle: item.normalizedTitle ?? null,
     publishedAt: item.publishedAt,

@@ -10,6 +10,7 @@ import {
   redditConnector,
   rssConnector,
 } from "@mirthspool/connectors";
+import { SharpPerceptualHasher } from "@mirthspool/deduplication";
 import { loadServerConfig } from "@mirthspool/config/server";
 import { loadSourceSecurityConfig } from "@mirthspool/config/source-security";
 import {
@@ -20,11 +21,13 @@ import {
 import {
   bullConnectionFromUrl,
   assertCacheMaintenanceJobData,
+  createDuplicateDetectionQueue,
   createMediaCacheQueue,
   createSourcePollQueue,
   QUEUE_NAMES,
   RedisHealthProbe,
   RedisOAuthTokenCache,
+  type DuplicateDetectionJobData,
   type SourcePollJobData,
 } from "@mirthspool/redis";
 import { createStructuredLogger } from "@mirthspool/shared";
@@ -46,6 +49,10 @@ import {
   purgeOrphanedObjects,
   scheduleMediaCache,
 } from "./media-cache.js";
+import {
+  createDuplicateDetectionProcessor,
+  scheduleDuplicateAnalysis,
+} from "./duplicate-detection.js";
 
 const heartbeatPath = "/tmp/mirthspool-worker-heartbeat";
 const dayMilliseconds = 86_400_000;
@@ -85,6 +92,10 @@ async function main(): Promise<void> {
     completedSeconds: config.completedJobRetentionSeconds,
     failedSeconds: config.failedJobRetentionSeconds,
   });
+  const duplicateQueue = createDuplicateDetectionQueue(config.redisUrl, {
+    completedSeconds: config.completedJobRetentionSeconds,
+    failedSeconds: config.failedJobRetentionSeconds,
+  });
   const mediaQueue = createMediaCacheQueue(config.redisUrl, {
     completedSeconds: config.completedJobRetentionSeconds,
     failedSeconds: config.failedJobRetentionSeconds,
@@ -101,6 +112,7 @@ async function main(): Promise<void> {
     QUEUE_NAMES.sourcePolling,
     createSourcePollProcessor({
       database,
+      duplicateQueue,
       http: new HardenedHttpClient({
         allowPrivateAddresses: security.allowPrivateSourceUrls,
         allowedPorts: security.allowedSourcePorts,
@@ -182,6 +194,23 @@ async function main(): Promise<void> {
     }),
     { concurrency: config.mediaCacheConcurrency, connection },
   );
+  const duplicateWorker = new Worker<DuplicateDetectionJobData>(
+    QUEUE_NAMES.duplicateDetection,
+    createDuplicateDetectionProcessor({
+      database,
+      hasher: new SharpPerceptualHasher(),
+      limits: {
+        hashMaxBytes: config.duplicateHashMaxBytes,
+        hashMaxPixels: config.duplicateHashMaxPixels,
+        hashTimeoutMs: config.duplicateHashTimeoutMs,
+        maxCandidates: config.duplicateMaxCandidates,
+      },
+      logger,
+      shutdownSignal: shutdownController.signal,
+      storage,
+    }),
+    { concurrency: config.duplicateAnalysisConcurrency, connection },
+  );
 
   sourceWorker.on("failed", (job, error) => {
     logger.warn("worker.source_poll.failed", {
@@ -194,6 +223,15 @@ async function main(): Promise<void> {
   );
   maintenanceWorker.on("error", () =>
     logger.error("worker.maintenance.error", { code: "QUEUE_ERROR" }),
+  );
+  duplicateWorker.on("failed", (job, error) => {
+    logger.warn("worker.duplicate_analysis.job_failed", {
+      code: error.message.slice(0, 100),
+      jobId: job?.id,
+    });
+  });
+  duplicateWorker.on("error", () =>
+    logger.error("worker.duplicate_analysis.error", { code: "QUEUE_ERROR" }),
   );
   mediaWorker.on("failed", (job, error) => {
     logger.warn("worker.media_cache.job_failed", {
@@ -213,12 +251,18 @@ async function main(): Promise<void> {
   };
   const schedule = async (): Promise<void> => {
     const now = new Date();
-    const [sourceCount, mediaCount] = await Promise.all([
+    const [sourceCount, mediaCount, duplicateCount] = await Promise.all([
       scheduleDueSources(database, sourceQueue, now),
       scheduleMediaCache(database, mediaQueue, now),
+      scheduleDuplicateAnalysis(
+        database,
+        duplicateQueue,
+        config.duplicateMaxCandidates,
+      ),
     ]);
-    if (sourceCount > 0 || mediaCount > 0) {
+    if (sourceCount > 0 || mediaCount > 0 || duplicateCount > 0) {
       logger.info("worker.scheduler.enqueued", {
+        duplicateCount,
         mediaCount,
         sourceCount,
       });
@@ -283,11 +327,13 @@ async function main(): Promise<void> {
     shutdownController.abort(signal);
     await Promise.all([
       sourceWorker.close(),
+      duplicateWorker.close(),
       mediaWorker.close(),
       maintenanceWorker.close(),
     ]);
     await Promise.all([
       sourceQueue.close(),
+      duplicateQueue.close(),
       mediaQueue.close(),
       maintenanceQueue.close(),
     ]);

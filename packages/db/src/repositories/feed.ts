@@ -84,6 +84,7 @@ export function getFeedContent(
 function feedWhere(input: FeedQuery): Prisma.ContentItemWhereInput {
   const AND: Prisma.ContentItemWhereInput[] = [
     { status: "ACTIVE" },
+    { duplicatePrimary: true },
     { contentRating: { in: [...input.allowedRatings] } },
     { actions: { none: { kind: "HIDE", userId: input.userId } } },
   ];

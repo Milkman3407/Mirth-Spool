@@ -12,6 +12,10 @@ import {
   safeConnectorFailure,
 } from "@mirthspool/connectors";
 import {
+  canonicalUrlHash,
+  normalizeCanonicalUrl,
+} from "@mirthspool/deduplication";
+import {
   createCredentialKeyring,
   decryptCredential,
   type CredentialKeyring,
@@ -25,6 +29,8 @@ import {
 } from "@mirthspool/db";
 import {
   assertSourcePollJobData,
+  enqueueDuplicateDetection,
+  type DuplicateDetectionEnqueuer,
   type SourcePollJobData,
 } from "@mirthspool/redis";
 import { UnrecoverableError, type Job } from "bullmq";
@@ -39,6 +45,7 @@ export interface IngestionLimits {
 
 export interface ProcessorDependencies {
   readonly database: DatabaseClient;
+  readonly duplicateQueue?: DuplicateDetectionEnqueuer;
   readonly http: ConnectorHttpClient;
   readonly keyring: CredentialKeyring;
   readonly limits: IngestionLimits;
@@ -156,6 +163,18 @@ export function createSourcePollProcessor(dependencies: ProcessorDependencies) {
           },
           now(),
         );
+        for (const contentId of persisted.contentIds) {
+          if (!dependencies.duplicateQueue) break;
+          await enqueueDuplicateDetection(dependencies.duplicateQueue, {
+            contentId,
+            requestedAt: now().toISOString(),
+          }).catch(() =>
+            dependencies.logger.warn(
+              "worker.duplicate_analysis.enqueue_failed",
+              { contentId },
+            ),
+          );
+        }
         stats.pagesFetched += 1;
         stats.itemsSeen += page.posts.length;
         stats.itemsCreated += persisted.created;
@@ -329,12 +348,11 @@ function normalizedContent(
   },
   post: ReturnType<typeof connectorPageSchema.parse>["posts"][number],
 ): NormalizedContentInput {
+  const canonicalUrl = normalizeCanonicalUrl(post.originalUrl);
   return {
     authorName: post.authorName,
-    canonicalUrl: post.originalUrl,
-    canonicalUrlHash: createHash("sha256")
-      .update(post.originalUrl)
-      .digest("hex"),
+    canonicalUrl,
+    canonicalUrlHash: canonicalUrlHash(canonicalUrl),
     contentRating:
       post.contentRating === "UNKNOWN"
         ? source.defaultContentRating
@@ -359,6 +377,7 @@ function normalizedContent(
     providerCommentCount: post.providerCommentCount,
     providerFavouriteCount: post.providerFavouriteCount,
     providerLanguage: post.providerLanguage,
+    providerTags: post.categories,
     providerPublishedAt: new Date(post.providerCreatedAt),
     providerDeletedAt: post.providerDeletedAt
       ? new Date(post.providerDeletedAt)

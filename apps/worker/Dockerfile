@@ -10,6 +10,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig
 COPY apps/worker apps/worker
 COPY packages/config packages/config
 COPY packages/connectors packages/connectors
+COPY packages/deduplication packages/deduplication
 COPY packages/db packages/db
 COPY packages/redis packages/redis
 COPY packages/shared packages/shared

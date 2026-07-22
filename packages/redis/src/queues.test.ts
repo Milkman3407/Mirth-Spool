@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  assertDuplicateDetectionJobData,
   assertSourcePollJobData,
+  enqueueDuplicateDetection,
   enqueueMediaCache,
   enqueueSourcePoll,
   sourcePollJobId,
@@ -45,5 +47,24 @@ describe("source polling queues", () => {
     expect(JSON.stringify(add.mock.calls)).not.toMatch(
       /url|credential|secret|token/i,
     );
+  });
+
+  it("queues only an internal content ID for bounded duplicate analysis", async () => {
+    const add = vi.fn().mockResolvedValue({});
+    const contentId = "33333333-3333-4333-8333-333333333333";
+    await enqueueDuplicateDetection(
+      { add },
+      { contentId, requestedAt: "2026-07-21T12:00:20.000Z" },
+    );
+    expect(add.mock.calls[0]?.[2].jobId).toContain(contentId);
+    expect(JSON.stringify(add.mock.calls)).not.toMatch(
+      /url|credential|password|secret|token/i,
+    );
+    expect(() =>
+      assertDuplicateDetectionJobData({
+        contentId: "not-an-id",
+        requestedAt: "not-a-date",
+      }),
+    ).toThrow("Invalid duplicate detection job");
   });
 });

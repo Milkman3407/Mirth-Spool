@@ -181,16 +181,50 @@ export async function queryLibrary(client: PrismaClient, input: LibraryQuery) {
 }
 
 export function contentPresentationInclude(userId: string) {
+  const actionSelection = {
+    orderBy: { kind: "asc" as const },
+    select: {
+      kind: true,
+      lastOccurredAt: true,
+      occurredAt: true,
+      occurrenceCount: true,
+    },
+    where: { userId },
+  };
   return {
-    actions: {
-      orderBy: { kind: "asc" as const },
+    actions: actionSelection,
+    duplicateGroup: {
       select: {
-        kind: true,
-        lastOccurredAt: true,
-        occurredAt: true,
-        occurrenceCount: true,
+        id: true,
+        items: {
+          orderBy: [
+            { duplicatePrimary: "desc" as const },
+            { id: "asc" as const },
+          ],
+          select: {
+            actions: actionSelection,
+            id: true,
+            sourcePosts: {
+              include: {
+                source: {
+                  select: { displayName: true, id: true, kind: true },
+                },
+              },
+              orderBy: [
+                { firstSeenAt: "asc" as const },
+                { id: "asc" as const },
+              ],
+              take: 20,
+            },
+            tags: {
+              include: { tag: true },
+              orderBy: { tagId: "asc" as const },
+            },
+          },
+          take: 50,
+        },
+        primaryContentId: true,
       },
-      where: { userId },
     },
     mediaAssets: {
       orderBy: [{ ordinal: "asc" as const }, { id: "asc" as const }],

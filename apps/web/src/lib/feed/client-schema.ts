@@ -55,6 +55,13 @@ export const feedItemSchema = z.object({
   authorName: z.string().nullable(),
   contentRating: z.enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"]),
   contentWarning: z.string().nullable(),
+  duplicateGroup: z
+    .object({
+      id: z.uuid(),
+      itemCount: z.number().int().min(2).max(50),
+    })
+    .nullable()
+    .default(null),
   id: z.uuid(),
   media: feedMediaSchema.nullable(),
   primarySource: z

@@ -32,6 +32,36 @@ const serverEnvironmentSchema = z.object({
     .min(3_600)
     .max(2_592_000)
     .default(604_800),
+  MIRTHSPOOL_DUPLICATE_ANALYSIS_CONCURRENCY: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(4)
+    .default(1),
+  MIRTHSPOOL_DUPLICATE_HASH_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(65_536)
+    .max(50_000_000)
+    .default(20_000_000),
+  MIRTHSPOOL_DUPLICATE_HASH_MAX_PIXELS: z.coerce
+    .number()
+    .int()
+    .min(65_536)
+    .max(100_000_000)
+    .default(16_777_216),
+  MIRTHSPOOL_DUPLICATE_HASH_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(30_000)
+    .default(5_000),
+  MIRTHSPOOL_DUPLICATE_MAX_CANDIDATES: z.coerce
+    .number()
+    .int()
+    .min(10)
+    .max(500)
+    .default(100),
   MIRTHSPOOL_INGESTION_MAX_DURATION_MS: z.coerce
     .number()
     .int()
@@ -106,6 +136,11 @@ export interface ServerConfig {
   readonly client: ClientConfig;
   readonly completedJobRetentionSeconds: number;
   readonly databaseUrl: string;
+  readonly duplicateAnalysisConcurrency: number;
+  readonly duplicateHashMaxBytes: number;
+  readonly duplicateHashMaxPixels: number;
+  readonly duplicateHashTimeoutMs: number;
+  readonly duplicateMaxCandidates: number;
   readonly failedJobRetentionSeconds: number;
   readonly healthCheckTimeoutMs: number;
   readonly ingestionMaxDurationMs: number;
@@ -136,6 +171,12 @@ export function parseServerConfig(environment: unknown): ServerConfig {
       completedJobRetentionSeconds:
         parsed.data.MIRTHSPOOL_COMPLETED_JOB_RETENTION_SECONDS,
       databaseUrl: parsed.data.DATABASE_URL,
+      duplicateAnalysisConcurrency:
+        parsed.data.MIRTHSPOOL_DUPLICATE_ANALYSIS_CONCURRENCY,
+      duplicateHashMaxBytes: parsed.data.MIRTHSPOOL_DUPLICATE_HASH_MAX_BYTES,
+      duplicateHashMaxPixels: parsed.data.MIRTHSPOOL_DUPLICATE_HASH_MAX_PIXELS,
+      duplicateHashTimeoutMs: parsed.data.MIRTHSPOOL_DUPLICATE_HASH_TIMEOUT_MS,
+      duplicateMaxCandidates: parsed.data.MIRTHSPOOL_DUPLICATE_MAX_CANDIDATES,
       failedJobRetentionSeconds:
         parsed.data.MIRTHSPOOL_FAILED_JOB_RETENTION_SECONDS,
       healthCheckTimeoutMs: parsed.data.MIRTHSPOOL_HEALTH_CHECK_TIMEOUT_MS,
