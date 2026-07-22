@@ -22,6 +22,7 @@ interface ManagedSource {
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
   lastSuccessAt: string | null;
+  minimumScore: number | null;
   pollIntervalSeconds: number;
   priority: number;
   status: string;
@@ -125,6 +126,38 @@ export function SourceManager() {
     });
   }
 
+  function createLemmySource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const minimumScore = Number(form.get("lemmyMinimumScore"));
+    void run(async () => {
+      await api(
+        "/api/sources",
+        jsonMutation("POST", {
+          config: {
+            community: form.get("lemmyCommunity"),
+            contentPolicy: form.get("lemmyContentPolicy"),
+            instanceUrl: form.get("lemmyInstanceUrl"),
+            itemsPerPage: Number(form.get("lemmyItemsPerPage")),
+            minimumScore,
+            pageLimit: Number(form.get("lemmyPageLimit")),
+            sort: form.get("lemmySort"),
+          },
+          defaultContentRating: form.get("lemmyDefaultContentRating"),
+          displayName: form.get("lemmyDisplayName"),
+          enabled: form.get("lemmyEnabled") === "on",
+          kind: "LEMMY",
+          minimumScore,
+          pollIntervalSeconds: Number(form.get("lemmyPollIntervalSeconds")),
+          priority: Number(form.get("lemmyPriority")),
+        }),
+      );
+      formElement.reset();
+      setNotice("Lemmy community source created.");
+    });
+  }
+
   return (
     <div className="source-manager">
       <section className="panel">
@@ -189,6 +222,132 @@ export function SourceManager() {
           </label>
           <button disabled={pending} type="submit">
             Add source
+          </button>
+        </form>
+      </section>
+
+      <section className="panel">
+        <h2>Add Lemmy community</h2>
+        <p className="form-hint">
+          Uses the public Lemmy API only. Linked destinations are never scraped
+          or fetched during validation.
+        </p>
+        <form className="source-form" onSubmit={createLemmySource}>
+          <label>
+            Lemmy display name
+            <input maxLength={200} name="lemmyDisplayName" required />
+          </label>
+          <label>
+            Instance URL
+            <input
+              maxLength={2048}
+              name="lemmyInstanceUrl"
+              placeholder="https://example.instance"
+              required
+              type="url"
+            />
+          </label>
+          <label>
+            Community name or numeric identifier
+            <input
+              maxLength={100}
+              name="lemmyCommunity"
+              pattern="[A-Za-z0-9_]+"
+              required
+            />
+          </label>
+          <label>
+            Lemmy sort
+            <select defaultValue="New" name="lemmySort">
+              <option value="New">New</option>
+              <option value="Hot">Hot</option>
+              <option value="Active">Active</option>
+              <option value="TopDay">Top day</option>
+              <option value="TopWeek">Top week</option>
+              <option value="TopMonth">Top month</option>
+              <option value="TopYear">Top year</option>
+              <option value="TopAll">Top all time</option>
+            </select>
+          </label>
+          <label>
+            Lemmy minimum score
+            <input
+              defaultValue="0"
+              max="1000000"
+              min="-1000000"
+              name="lemmyMinimumScore"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Lemmy content policy
+            <select defaultValue="EXCLUDE_ADULT" name="lemmyContentPolicy">
+              <option value="EXCLUDE_ADULT">Exclude adult posts</option>
+              <option value="TREAT_ADULT_AS_SENSITIVE">
+                Treat adult posts as sensitive
+              </option>
+              <option value="INCLUDE_ADULT">Include as adult</option>
+            </select>
+          </label>
+          <label>
+            Lemmy items per page
+            <input
+              defaultValue="20"
+              max="50"
+              min="1"
+              name="lemmyItemsPerPage"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Lemmy pages per run
+            <input
+              defaultValue="3"
+              max="10"
+              min="1"
+              name="lemmyPageLimit"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Lemmy poll interval (seconds)
+            <input
+              defaultValue="900"
+              max="86400"
+              min="60"
+              name="lemmyPollIntervalSeconds"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Lemmy priority
+            <input
+              defaultValue="0"
+              max="100"
+              min="-100"
+              name="lemmyPriority"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Lemmy rating policy for unclassified posts
+            <select defaultValue="UNKNOWN" name="lemmyDefaultContentRating">
+              <option value="UNKNOWN">Unknown (review required)</option>
+              <option value="SAFE">Safe</option>
+              <option value="SENSITIVE">Sensitive</option>
+              <option value="ADULT">Adult</option>
+            </select>
+          </label>
+          <label>
+            <input name="lemmyEnabled" type="checkbox" /> Enable Lemmy source
+          </label>
+          <button disabled={pending} type="submit">
+            Add Lemmy source
           </button>
         </form>
       </section>
@@ -297,6 +456,20 @@ function SourceEditor({
                 },
               }
             : {}),
+          ...(source.kind === "LEMMY"
+            ? {
+                config: {
+                  community: form.get("lemmyCommunity"),
+                  contentPolicy: form.get("lemmyContentPolicy"),
+                  instanceUrl: form.get("lemmyInstanceUrl"),
+                  itemsPerPage: Number(form.get("lemmyItemsPerPage")),
+                  minimumScore: Number(form.get("lemmyMinimumScore")),
+                  pageLimit: Number(form.get("lemmyPageLimit")),
+                  sort: form.get("lemmySort"),
+                },
+                minimumScore: Number(form.get("lemmyMinimumScore")),
+              }
+            : {}),
           defaultContentRating: form.get("defaultContentRating"),
           displayName: form.get("displayName"),
           pollIntervalSeconds: Number(form.get("pollIntervalSeconds")),
@@ -382,6 +555,99 @@ function SourceEditor({
                 max="100"
                 min="1"
                 name="maxEntries"
+                required
+                type="number"
+              />
+            </label>
+          </>
+        ) : null}
+        {source.kind === "LEMMY" ? (
+          <>
+            <label>
+              Instance URL
+              <input
+                defaultValue={String(source.configJson.instanceUrl ?? "")}
+                maxLength={2048}
+                name="lemmyInstanceUrl"
+                required
+                type="url"
+              />
+            </label>
+            <label>
+              Community name or numeric identifier
+              <input
+                defaultValue={String(source.configJson.community ?? "")}
+                maxLength={100}
+                name="lemmyCommunity"
+                required
+              />
+            </label>
+            <label>
+              Lemmy sort
+              <select
+                defaultValue={String(source.configJson.sort ?? "New")}
+                name="lemmySort"
+              >
+                {[
+                  "New",
+                  "Hot",
+                  "Active",
+                  "TopDay",
+                  "TopWeek",
+                  "TopMonth",
+                  "TopYear",
+                  "TopAll",
+                ].map((sort) => (
+                  <option key={sort} value={sort}>
+                    {sort}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Lemmy minimum score
+              <input
+                defaultValue={Number(source.configJson.minimumScore ?? 0)}
+                max="1000000"
+                min="-1000000"
+                name="lemmyMinimumScore"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              Lemmy content policy
+              <select
+                defaultValue={String(
+                  source.configJson.contentPolicy ?? "EXCLUDE_ADULT",
+                )}
+                name="lemmyContentPolicy"
+              >
+                <option value="EXCLUDE_ADULT">Exclude adult posts</option>
+                <option value="TREAT_ADULT_AS_SENSITIVE">
+                  Treat adult posts as sensitive
+                </option>
+                <option value="INCLUDE_ADULT">Include as adult</option>
+              </select>
+            </label>
+            <label>
+              Lemmy items per page
+              <input
+                defaultValue={Number(source.configJson.itemsPerPage ?? 20)}
+                max="50"
+                min="1"
+                name="lemmyItemsPerPage"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              Lemmy pages per run
+              <input
+                defaultValue={Number(source.configJson.pageLimit ?? 3)}
+                max="10"
+                min="1"
+                name="lemmyPageLimit"
                 required
                 type="number"
               />
@@ -487,7 +753,9 @@ function SourceEditor({
               onNotice(
                 details?.feedTitle
                   ? `${body.result.message} ${details.sampleItemCount ?? "0"} sample entries parsed (${details.feedFormat ?? "feed"}).`
-                  : body.result.message,
+                  : details?.communityName
+                    ? `${body.result.message} Resolved ${details.communityTitle ?? details.communityName} via ${details.apiCompatibility ?? "Lemmy API"}.`
+                    : body.result.message,
               );
             })
           }

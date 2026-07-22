@@ -325,6 +325,7 @@ function normalizedContent(
         ? source.defaultContentRating
         : post.contentRating,
     contentWarning: post.contentWarning,
+    communityName: post.communityName,
     externalId: post.externalId,
     media: post.media.map((media, ordinal) => ({
       byteLength: media.byteLength === null ? null : BigInt(media.byteLength),
@@ -338,13 +339,18 @@ function normalizedContent(
     })),
     normalizedTitle: post.title?.trim().toLocaleLowerCase() ?? null,
     providerAuthor: post.authorName,
+    providerCommentCount: post.providerCommentCount,
     providerPublishedAt: new Date(post.providerCreatedAt),
+    providerDeletedAt: post.providerDeletedAt
+      ? new Date(post.providerDeletedAt)
+      : null,
     providerScore: post.providerScore,
     providerUpdatedAt: post.providerUpdatedAt
       ? new Date(post.providerUpdatedAt)
       : null,
     providerUrl: post.originalUrl,
     publishedAt: new Date(post.providerCreatedAt),
+    status: post.providerDeletedAt ? "REMOVED_AT_SOURCE" : "ACTIVE",
     sourceId: source.id,
     summary: post.summary,
     title: post.title,

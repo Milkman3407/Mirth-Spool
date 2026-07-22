@@ -347,6 +347,53 @@ test.describe.serial("private setup, sources, and feed", () => {
       page.getByRole("heading", { name: "View history is disabled" }),
     ).toBeVisible();
   });
+
+  test("adds a public Lemmy source and displays normalized attribution", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await signIn(page);
+    await page.goto("/sources");
+    await page.getByLabel("Lemmy display name").fill("Fixture Lemmy community");
+    await page
+      .getByLabel("Instance URL")
+      .first()
+      .fill("http://fixture-feed:8080");
+    await page
+      .getByLabel("Community name or numeric identifier")
+      .first()
+      .fill("memes");
+    await page.getByLabel("Enable Lemmy source").check();
+    await page.getByRole("button", { name: "Add Lemmy source" }).click();
+
+    const source = page
+      .locator("article.source-card")
+      .filter({ hasText: "Fixture Lemmy community" });
+    await expect(source).toContainText("LEMMY · ACTIVE");
+    await source.getByRole("button", { name: "Validate" }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "Connected to memes@fixture-feed",
+    );
+    await source.getByRole("button", { name: "Refresh now" }).click();
+    await source.getByText(/Recent ingestion runs/).click();
+    await expect(source.locator(".run-row").first()).toContainText(
+      "SUCCEEDED",
+      {
+        timeout: 20_000,
+      },
+    );
+
+    await page.goto("/");
+    const card = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Synthetic image post" });
+    await expect(card).toBeVisible();
+    await card.getByRole("link", { name: "View details" }).click();
+    await expect(page.getByText("memes@fixture-feed")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Open original/ }).first(),
+    ).toHaveAttribute("href", "https://lemmy.example/post/1001");
+  });
 });
 
 async function signIn(page: Page) {
