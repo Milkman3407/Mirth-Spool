@@ -190,6 +190,58 @@ export function SourceManager() {
     });
   }
 
+  function createRedditSource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const enableAfterCredential = form.get("redditEnabled") === "on";
+    const minimumScore = Number(form.get("redditMinimumScore"));
+    void run(async () => {
+      const created = await api<{ source: ManagedSource }>(
+        "/api/sources",
+        jsonMutation("POST", {
+          config: {
+            contentPolicy: form.get("redditContentPolicy"),
+            includeStickied: form.get("redditIncludeStickied") === "on",
+            itemsPerPage: Number(form.get("redditItemsPerPage")),
+            minimumScore,
+            pageLimit: Number(form.get("redditPageLimit")),
+            sort: form.get("redditSort"),
+            subreddit: form.get("redditSubreddit"),
+            timeWindow: form.get("redditTimeWindow"),
+          },
+          defaultContentRating: form.get("redditDefaultContentRating"),
+          displayName: form.get("redditDisplayName"),
+          enabled: false,
+          kind: "REDDIT",
+          minimumScore,
+          pollIntervalSeconds: Number(form.get("redditPollIntervalSeconds")),
+          priority: Number(form.get("redditPriority")),
+        }),
+      );
+      await api(
+        `/api/sources/${created.source.id}/credentials`,
+        jsonMutation("POST", {
+          kind: "OAUTH_CLIENT",
+          label: "primary",
+          payload: {
+            clientId: form.get("redditClientId"),
+            clientSecret: form.get("redditClientSecret"),
+            userAgent: form.get("redditUserAgent"),
+          },
+        }),
+      );
+      if (enableAfterCredential) {
+        await api(
+          `/api/sources/${created.source.id}/resume`,
+          jsonMutation("POST", {}),
+        );
+      }
+      formElement.reset();
+      setNotice("Reddit source and encrypted OAuth credential created.");
+    });
+  }
+
   return (
     <div className="source-manager">
       <section className="panel">
@@ -503,6 +555,161 @@ export function SourceManager() {
         </form>
       </section>
 
+      <section className="panel">
+        <h2>Add Reddit subreddit</h2>
+        <p className="form-hint">
+          Uses Reddit's approved Data API with app-only OAuth and read scope.
+          Credentials stay server-side; linked destinations are never fetched.
+        </p>
+        <form className="source-form" onSubmit={createRedditSource}>
+          <label>
+            Reddit display name
+            <input maxLength={200} name="redditDisplayName" required />
+          </label>
+          <label>
+            Subreddit
+            <input
+              maxLength={21}
+              name="redditSubreddit"
+              pattern="[A-Za-z0-9_]{3,21}"
+              required
+            />
+          </label>
+          <label>
+            Sort
+            <select defaultValue="new" name="redditSort">
+              <option value="new">New</option>
+              <option value="hot">Hot</option>
+              <option value="top">Top</option>
+              <option value="rising">Rising</option>
+            </select>
+          </label>
+          <label>
+            Top time window
+            <select defaultValue="day" name="redditTimeWindow">
+              {["hour", "day", "week", "month", "year", "all"].map((window) => (
+                <option key={window} value={window}>
+                  {window}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Minimum score
+            <input
+              defaultValue="0"
+              max="1000000"
+              min="-1000000"
+              name="redditMinimumScore"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Content policy
+            <select defaultValue="EXCLUDE_ADULT" name="redditContentPolicy">
+              <option value="EXCLUDE_ADULT">Exclude adult posts</option>
+              <option value="TREAT_ADULT_AS_SENSITIVE">
+                Treat adult posts as sensitive
+              </option>
+              <option value="INCLUDE_ADULT">Include as adult</option>
+            </select>
+          </label>
+          <label>
+            <input name="redditIncludeStickied" type="checkbox" /> Include
+            stickied posts
+          </label>
+          <label>
+            Posts per page
+            <input
+              defaultValue="25"
+              max="100"
+              min="1"
+              name="redditItemsPerPage"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Pages per run
+            <input
+              defaultValue="3"
+              max="10"
+              min="1"
+              name="redditPageLimit"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            OAuth client ID
+            <input
+              autoComplete="off"
+              maxLength={100}
+              name="redditClientId"
+              required
+            />
+          </label>
+          <label>
+            OAuth client secret
+            <input
+              autoComplete="off"
+              maxLength={500}
+              name="redditClientSecret"
+              required
+              type="password"
+            />
+          </label>
+          <label>
+            Reddit User-Agent
+            <input
+              maxLength={500}
+              name="redditUserAgent"
+              placeholder="linux:mirthspool:v0.1 (by /u/yourname)"
+              required
+            />
+          </label>
+          <label>
+            Poll interval (seconds)
+            <input
+              defaultValue="900"
+              max="86400"
+              min="60"
+              name="redditPollIntervalSeconds"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Priority
+            <input
+              defaultValue="0"
+              max="100"
+              min="-100"
+              name="redditPriority"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Fallback rating
+            <select defaultValue="UNKNOWN" name="redditDefaultContentRating">
+              <option value="UNKNOWN">Unknown (review required)</option>
+              <option value="SAFE">Safe</option>
+              <option value="SENSITIVE">Sensitive</option>
+              <option value="ADULT">Adult</option>
+            </select>
+          </label>
+          <label>
+            <input name="redditEnabled" type="checkbox" /> Enable after securely
+            storing credentials
+          </label>
+          <button disabled={pending} type="submit">
+            Add Reddit source
+          </button>
+        </form>
+      </section>
+
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -636,6 +843,21 @@ function SourceEditor({
                 },
               }
             : {}),
+          ...(source.kind === "REDDIT"
+            ? {
+                config: {
+                  contentPolicy: form.get("redditContentPolicy"),
+                  includeStickied: form.get("redditIncludeStickied") === "on",
+                  itemsPerPage: Number(form.get("redditItemsPerPage")),
+                  minimumScore: Number(form.get("redditMinimumScore")),
+                  pageLimit: Number(form.get("redditPageLimit")),
+                  sort: form.get("redditSort"),
+                  subreddit: form.get("redditSubreddit"),
+                  timeWindow: form.get("redditTimeWindow"),
+                },
+                minimumScore: Number(form.get("redditMinimumScore")),
+              }
+            : {}),
           defaultContentRating: form.get("defaultContentRating"),
           displayName: form.get("displayName"),
           pollIntervalSeconds: Number(form.get("pollIntervalSeconds")),
@@ -651,16 +873,24 @@ function SourceEditor({
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const secret = String(form.get("secret") ?? "");
+    const payload =
+      source.kind === "REDDIT"
+        ? {
+            clientId: form.get("redditClientId"),
+            clientSecret: form.get("redditClientSecret"),
+            userAgent: form.get("redditUserAgent"),
+          }
+        : { secret };
     void run(async () => {
       const result = await api<{ credential: CredentialSummary }>(
         `/api/sources/${source.id}/credentials`,
         jsonMutation("POST", {
-          kind: form.get("kind"),
-          label: form.get("label"),
-          payload: { secret },
+          kind: source.kind === "REDDIT" ? "OAUTH_CLIENT" : form.get("kind"),
+          label: source.kind === "REDDIT" ? "primary" : form.get("label"),
+          payload,
         }),
       );
-      if (JSON.stringify(result).includes(secret)) {
+      if (secret && JSON.stringify(result).includes(secret)) {
         throw new Error("Credential response contained secret material.");
       }
       formElement.reset();
@@ -902,6 +1132,103 @@ function SourceEditor({
             </label>
           </>
         ) : null}
+        {source.kind === "REDDIT" ? (
+          <>
+            <label>
+              Subreddit
+              <input
+                defaultValue={String(source.configJson.subreddit ?? "")}
+                maxLength={21}
+                name="redditSubreddit"
+                pattern="[A-Za-z0-9_]{3,21}"
+                required
+              />
+            </label>
+            <label>
+              Sort
+              <select
+                defaultValue={String(source.configJson.sort ?? "new")}
+                name="redditSort"
+              >
+                <option value="new">New</option>
+                <option value="hot">Hot</option>
+                <option value="top">Top</option>
+                <option value="rising">Rising</option>
+              </select>
+            </label>
+            <label>
+              Top time window
+              <select
+                defaultValue={String(source.configJson.timeWindow ?? "day")}
+                name="redditTimeWindow"
+              >
+                {["hour", "day", "week", "month", "year", "all"].map(
+                  (window) => (
+                    <option key={window} value={window}>
+                      {window}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label>
+              Minimum score
+              <input
+                defaultValue={Number(source.configJson.minimumScore ?? 0)}
+                max="1000000"
+                min="-1000000"
+                name="redditMinimumScore"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              Content policy
+              <select
+                defaultValue={String(
+                  source.configJson.contentPolicy ?? "EXCLUDE_ADULT",
+                )}
+                name="redditContentPolicy"
+              >
+                <option value="EXCLUDE_ADULT">Exclude adult posts</option>
+                <option value="TREAT_ADULT_AS_SENSITIVE">
+                  Treat adult posts as sensitive
+                </option>
+                <option value="INCLUDE_ADULT">Include as adult</option>
+              </select>
+            </label>
+            <label>
+              <input
+                defaultChecked={source.configJson.includeStickied === true}
+                name="redditIncludeStickied"
+                type="checkbox"
+              />{" "}
+              Include stickied posts
+            </label>
+            <label>
+              Posts per page
+              <input
+                defaultValue={Number(source.configJson.itemsPerPage ?? 25)}
+                max="100"
+                min="1"
+                name="redditItemsPerPage"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              Pages per run
+              <input
+                defaultValue={Number(source.configJson.pageLimit ?? 3)}
+                max="10"
+                min="1"
+                name="redditPageLimit"
+                required
+                type="number"
+              />
+            </label>
+          </>
+        ) : null}
         <label>
           Display name
           <input
@@ -1005,7 +1332,9 @@ function SourceEditor({
                     ? `${body.result.message} Resolved ${details.communityTitle ?? details.communityName} via ${details.apiCompatibility ?? "Lemmy API"}.`
                     : details?.resolvedTarget
                       ? `${body.result.message} ${details.instanceTitle ?? details.instanceHost} reports ${details.instanceVersion ?? "an unknown version"} (${details.apiCompatibility ?? "Mastodon API"}).`
-                      : body.result.message,
+                      : details?.subreddit
+                        ? `${body.result.message} ${details.subredditTitle ?? details.subreddit} returned ${details.sampleItemCount ?? "0"} sample posts; OAuth credential health is ${details.credentialHealth ?? "unknown"}.`
+                        : body.result.message,
               );
             })
           }
@@ -1070,34 +1399,79 @@ function SourceEditor({
           Values are encrypted and never returned after submission.
         </p>
         <form className="source-form compact" onSubmit={rotateCredential}>
-          <label>
-            Credential kind
-            <select defaultValue="ACCESS_TOKEN" name="kind">
-              <option value="ACCESS_TOKEN">Access token</option>
-              <option value="BASIC_AUTH">Basic authentication</option>
-              <option value="OAUTH_CLIENT">OAuth client</option>
-              <option value="CUSTOM">Custom</option>
-            </select>
-          </label>
-          <label>
-            Label
-            <input
-              defaultValue="primary"
-              maxLength={100}
-              name="label"
-              required
-            />
-          </label>
-          <label>
-            Secret value
-            <input
-              autoComplete="off"
-              maxLength={16000}
-              name="secret"
-              required
-              type="password"
-            />
-          </label>
+          {source.kind === "REDDIT" ? (
+            <>
+              <p className="form-hint">
+                OAuth client primary ·{" "}
+                {source.credentials.some(
+                  (item) =>
+                    item.kind === "OAUTH_CLIENT" && item.label === "primary",
+                )
+                  ? "stored"
+                  : "missing"}
+                . Validation checks credential health without revealing values.
+              </p>
+              <label>
+                OAuth client ID
+                <input
+                  autoComplete="off"
+                  maxLength={100}
+                  name="redditClientId"
+                  required
+                />
+              </label>
+              <label>
+                OAuth client secret
+                <input
+                  autoComplete="off"
+                  maxLength={500}
+                  name="redditClientSecret"
+                  required
+                  type="password"
+                />
+              </label>
+              <label>
+                Reddit User-Agent
+                <input
+                  maxLength={500}
+                  name="redditUserAgent"
+                  placeholder="linux:mirthspool:v0.1 (by /u/yourname)"
+                  required
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <label>
+                Credential kind
+                <select defaultValue="ACCESS_TOKEN" name="kind">
+                  <option value="ACCESS_TOKEN">Access token</option>
+                  <option value="BASIC_AUTH">Basic authentication</option>
+                  <option value="OAUTH_CLIENT">OAuth client</option>
+                  <option value="CUSTOM">Custom</option>
+                </select>
+              </label>
+              <label>
+                Label
+                <input
+                  defaultValue="primary"
+                  maxLength={100}
+                  name="label"
+                  required
+                />
+              </label>
+              <label>
+                Secret value
+                <input
+                  autoComplete="off"
+                  maxLength={16000}
+                  name="secret"
+                  required
+                  type="password"
+                />
+              </label>
+            </>
+          )}
           <button disabled={disabled} type="submit">
             Store or rotate credential
           </button>
