@@ -202,13 +202,17 @@ function presentDetail(row: ContentRow, historyEnabled: boolean) {
     canonicalUrl: row.canonicalUrl,
     media: row.mediaAssets.map(presentMedia),
     sources: row.sourcePosts.map((post) => ({
+      boostedBy: post.boostedBy,
       externalId: post.externalId,
       firstSeenAt: post.firstSeenAt.toISOString(),
       communityName: post.communityName,
       providerAuthor: post.providerAuthor,
       providerCommentCount: post.providerCommentCount,
+      providerFavouriteCount: post.providerFavouriteCount,
+      providerLanguage: post.providerLanguage,
       providerPublishedAt: post.providerPublishedAt?.toISOString() ?? null,
       providerScore: post.providerScore,
+      providerShareCount: post.providerShareCount,
       providerUrl: post.providerUrl,
       source: post.source,
     })),
@@ -244,6 +248,7 @@ function presentActionState(
 
 function presentMedia<
   T extends {
+    readonly altText: string | null;
     readonly byteLength: bigint | null;
     readonly durationMilliseconds: number | null;
     readonly height: number | null;
@@ -255,7 +260,7 @@ function presentMedia<
   },
 >(asset: T) {
   return {
-    altText: null,
+    altText: asset.altText,
     byteLength: asset.byteLength?.toString() ?? null,
     durationMs: asset.durationMilliseconds,
     height: asset.height,

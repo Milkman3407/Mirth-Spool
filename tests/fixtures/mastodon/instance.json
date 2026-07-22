@@ -1,0 +1,6 @@
+{
+  "domain": "mastodon.example",
+  "title": "Synthetic Mastodon",
+  "version": "4.6.0",
+  "api_versions": { "mastodon": 8 }
+}

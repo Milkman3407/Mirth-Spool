@@ -6,6 +6,7 @@ import {
   ConnectorRegistry,
   HardenedHttpClient,
   lemmyConnector,
+  mastodonConnector,
   rssConnector,
 } from "@mirthspool/connectors";
 import { loadServerConfig } from "@mirthspool/config/server";
@@ -93,7 +94,11 @@ async function main(): Promise<void> {
         maxRequests: 12,
       },
       logger,
-      registry: new ConnectorRegistry([rssConnector, lemmyConnector]),
+      registry: new ConnectorRegistry([
+        rssConnector,
+        lemmyConnector,
+        mastodonConnector,
+      ]),
       shutdownSignal: shutdownController.signal,
     }),
     {

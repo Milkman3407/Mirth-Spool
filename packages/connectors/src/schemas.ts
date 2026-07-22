@@ -52,6 +52,7 @@ export const normalizedMediaAssetSchema = z
 export const normalizedSourcePostSchema = z
   .object({
     authorName: z.string().trim().max(500).nullable().default(null),
+    boostedBy: z.string().trim().max(500).nullable().default(null),
     categories: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
     communityName: z.string().trim().max(500).nullable().default(null),
     contentRating: contentRatingSchema.default("UNKNOWN"),
@@ -65,6 +66,14 @@ export const normalizedSourcePostSchema = z
       .nonnegative()
       .nullable()
       .default(null),
+    providerFavouriteCount: z
+      .number()
+      .int()
+      .nonnegative()
+      .nullable()
+      .default(null),
+    providerLanguage: z.string().trim().max(35).nullable().default(null),
+    providerShareCount: z.number().int().nonnegative().nullable().default(null),
     providerCreatedAt: z.iso.datetime({ offset: true }),
     providerDeletedAt: z.iso
       .datetime({ offset: true })

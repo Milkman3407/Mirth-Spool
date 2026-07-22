@@ -1,0 +1,66 @@
+[
+  {
+    "id": "8001",
+    "created_at": "2026-07-22T14:00:00.000Z",
+    "sensitive": false,
+    "spoiler_text": "",
+    "visibility": "public",
+    "language": "en",
+    "uri": "https://remote.example/users/original/statuses/8001",
+    "url": "https://remote.example/@original/8001",
+    "replies_count": 1,
+    "reblogs_count": 7,
+    "favourites_count": 9,
+    "content": "<p>Repeated boundary status.</p>",
+    "account": {
+      "id": "acct-original",
+      "username": "original",
+      "acct": "original@remote.example",
+      "display_name": "Original",
+      "url": "https://remote.example/@original"
+    },
+    "media_attachments": [
+      {
+        "id": "media-repeat",
+        "type": "video",
+        "url": "https://remote.example/media/video.webm",
+        "preview_url": null,
+        "description": "Repeated",
+        "meta": null
+      }
+    ],
+    "reblog": null
+  },
+  {
+    "id": "5001",
+    "created_at": "2026-07-22T11:00:00.000Z",
+    "sensitive": false,
+    "spoiler_text": "",
+    "visibility": "public",
+    "language": "en",
+    "uri": "https://mastodon.example/users/artist/statuses/5001",
+    "url": "https://mastodon.example/@artist/5001",
+    "replies_count": 0,
+    "reblogs_count": 0,
+    "favourites_count": 1,
+    "content": "<p>Second page image.</p>",
+    "account": {
+      "id": "acct-41",
+      "username": "artist",
+      "acct": "artist",
+      "display_name": "Artist",
+      "url": "https://mastodon.example/@artist"
+    },
+    "media_attachments": [
+      {
+        "id": "media-page-2",
+        "type": "image",
+        "url": "https://files.example.test/page-2.jpg",
+        "preview_url": null,
+        "description": "Page two",
+        "meta": null
+      }
+    ],
+    "reblog": null
+  }
+]
