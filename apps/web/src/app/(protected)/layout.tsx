@@ -4,21 +4,9 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { LogoutButton } from "../../components/logout-button";
+import { PrimaryNavigation } from "../../components/primary-navigation";
 import { getAuthenticatedSession } from "../../lib/auth/session";
 import { getAuthServices } from "../../lib/auth/server";
-
-const navigation = [
-  { href: "/", label: "Feed" },
-  { href: "/search", label: "Search" },
-  { href: "/library/favorites", label: "Favorites" },
-  { href: "/library/hidden", label: "Hidden" },
-  { href: "/library/history", label: "History" },
-  { href: "/sources", label: "Sources" },
-  { href: "/duplicates", label: "Duplicates" },
-  { href: "/settings", label: "Settings" },
-  { href: "/status", label: "Status" },
-  { href: "/account/security", label: "Security" },
-] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -36,25 +24,22 @@ export default async function ProtectedLayout({
 
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <header className="site-header">
         <Link className="brand" href="/">
           Mirth<span className="brand-mark">Spool</span>
         </Link>
-        <nav aria-label="Primary navigation" className="primary-nav">
-          <ul>
-            {navigation.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href}>{item.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <PrimaryNavigation />
         <div className="account-nav">
           <span title={session.user.email}>{session.user.name}</span>
           <LogoutButton />
         </div>
       </header>
-      <main>{children}</main>
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
     </>
   );
 }

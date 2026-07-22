@@ -113,7 +113,7 @@ describe("feed media presentation", () => {
     expect(video?.muted).toBe(true);
     expect(video?.controls).toBe(true);
     expect(video?.autoplay).toBe(false);
-    expect(video?.preload).toBe("metadata");
+    expect(video?.preload).toBe("none");
     fireEvent.error(video!);
     expect(screen.getByText("Media could not be loaded")).toBeTruthy();
   });
