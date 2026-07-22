@@ -81,6 +81,10 @@ export function createSourcePollProcessor(dependencies: ProcessorDependencies) {
     job: Job<SourcePollJobData>,
   ): Promise<Readonly<Record<string, unknown>>> => {
     const data = assertSourcePollJobData(job.data);
+    dependencies.logger.info("worker.source_poll.started", {
+      correlationId: data.correlationId,
+      jobId: job.id,
+    });
     const now = dependencies.now ?? (() => new Date());
     const startedAt = now();
     const claimed = await claimIngestionRun(dependencies.database, {

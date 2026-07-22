@@ -1,4 +1,5 @@
 import process from "node:process";
+import { isIP } from "node:net";
 import { z } from "zod";
 
 import { parseClientConfig } from "./client.js";
@@ -12,11 +13,6 @@ const rejectedSecrets = new Set([
   "replace-with-a-random-secret",
 ]);
 
-const booleanFromEnvironment = z
-  .enum(["true", "false"])
-  .default("false")
-  .transform((value) => value === "true");
-
 const authEnvironmentSchema = z.object({
   MIRTHSPOOL_AUTH_SECRET: z
     .string()
@@ -27,14 +23,14 @@ const authEnvironmentSchema = z.object({
       "must not be a known placeholder",
     ),
   MIRTHSPOOL_PUBLIC_ORIGIN: z.string(),
-  MIRTHSPOOL_TRUST_PROXY: booleanFromEnvironment,
+  MIRTHSPOOL_TRUSTED_PROXY_IPS: z.string().max(1_024).default(""),
 });
 
 export interface AuthConfig {
   readonly publicOrigin: string;
   readonly secret: string;
   readonly secureCookies: boolean;
-  readonly trustProxy: boolean;
+  readonly trustedProxyAddresses: readonly string[];
 }
 
 export function parseAuthConfig(environment: unknown): AuthConfig {
@@ -48,11 +44,18 @@ export function parseAuthConfig(environment: unknown): AuthConfig {
 
   try {
     const publicOrigin = parseClientConfig(parsed.data).publicOrigin;
+    const trustedProxyAddresses =
+      parsed.data.MIRTHSPOOL_TRUSTED_PROXY_IPS.split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+    if (trustedProxyAddresses.some((value) => isIP(value) === 0)) {
+      throw new ConfigurationError(["MIRTHSPOOL_TRUSTED_PROXY_IPS"]);
+    }
     return Object.freeze({
       publicOrigin,
       secret: parsed.data.MIRTHSPOOL_AUTH_SECRET,
       secureCookies: new URL(publicOrigin).protocol === "https:",
-      trustProxy: parsed.data.MIRTHSPOOL_TRUST_PROXY,
+      trustedProxyAddresses: Object.freeze(trustedProxyAddresses),
     });
   } catch (error) {
     if (error instanceof ConfigurationError) {

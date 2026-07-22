@@ -1,8 +1,10 @@
 import {
   createDatabaseClient,
   createSource,
+  executeRetentionMaintenance,
   getSettingDefault,
   readSetting,
+  planRetentionMaintenance,
   updateMediaCacheMetadata,
   upsertNormalizedContent,
   validateSetting,
@@ -87,6 +89,45 @@ describe("normalized content persistence", () => {
 });
 
 describe("settings and lifecycle semantics", () => {
+  it("reports retention dry runs and preserves favorited content", async () => {
+    const old = new Date("2020-01-01T00:00:00.000Z");
+    const orphan = await client.contentItem.create({
+      data: { lastSeenAt: old, publishedAt: old },
+    });
+    const favorite = await client.contentItem.create({
+      data: { lastSeenAt: old, publishedAt: old },
+    });
+    const user = await client.user.create({
+      data: {
+        email: "retention@example.invalid",
+        emailNormalized: "retention@example.invalid",
+        name: "Retention test",
+        role: "ADMIN",
+      },
+    });
+    await client.userAction.create({
+      data: { contentItemId: favorite.id, kind: "FAVORITE", userId: user.id },
+    });
+    const cutoffs = {
+      auditBefore: new Date("2025-01-01T00:00:00.000Z"),
+      contentBefore: new Date("2025-01-01T00:00:00.000Z"),
+      ingestionBefore: new Date("2025-01-01T00:00:00.000Z"),
+      sessionBefore: new Date("2025-01-01T00:00:00.000Z"),
+    };
+    expect(await planRetentionMaintenance(client, cutoffs)).toMatchObject({
+      orphanedContent: 1,
+    });
+    expect(await executeRetentionMaintenance(client, cutoffs)).toMatchObject({
+      orphanedContent: 1,
+    });
+    expect(
+      await client.contentItem.findUnique({ where: { id: orphan.id } }),
+    ).toBeNull();
+    expect(
+      await client.contentItem.findUnique({ where: { id: favorite.id } }),
+    ).not.toBeNull();
+  });
+
   it("rejects secret-shaped fields in source configuration", async () => {
     await expect(
       createSource(client, {

@@ -14,8 +14,9 @@ import { SharpPerceptualHasher } from "@mirthspool/deduplication";
 import { loadServerConfig } from "@mirthspool/config/server";
 import { loadSourceSecurityConfig } from "@mirthspool/config/source-security";
 import {
-  cleanupIngestionRuns,
   createDatabaseClient,
+  executeRetentionMaintenance,
+  planRetentionMaintenance,
   PostgresHealthProbe,
 } from "@mirthspool/db";
 import {
@@ -158,17 +159,32 @@ async function main(): Promise<void> {
           now: new Date(),
         });
       }
-      const olderThan = new Date(
-        Date.now() - config.ingestionRunRetentionDays * dayMilliseconds,
-      );
-      const result = await cleanupIngestionRuns(database, olderThan);
+      const now = Date.now();
+      const cutoffs = {
+        auditBefore: new Date(
+          now - config.auditRetentionDays * dayMilliseconds,
+        ),
+        contentBefore: new Date(
+          now - config.orphanRetentionDays * dayMilliseconds,
+        ),
+        ingestionBefore: new Date(
+          now - config.ingestionRunRetentionDays * dayMilliseconds,
+        ),
+        sessionBefore: new Date(
+          now - config.sessionRetentionDays * dayMilliseconds,
+        ),
+      };
+      const dryRun = await planRetentionMaintenance(database, cutoffs);
+      logger.info("worker.maintenance.plan", dryRun);
+      const deleted = await executeRetentionMaintenance(database, cutoffs);
       const eviction = await evictMediaCache(database, storage, {
         mode: "POLICY",
         now: new Date(),
       });
       const orphanedObjects = await purgeOrphanedObjects(database, storage);
       return {
-        deletedRuns: result.count,
+        deleted,
+        dryRun,
         ...eviction,
         orphanedObjects,
       };

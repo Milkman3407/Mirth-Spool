@@ -30,8 +30,17 @@ const securityHeaders = [
     value: "camera=(), geolocation=(), microphone=()",
   },
   { key: "Referrer-Policy", value: "no-referrer" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
 ];
+
+if (process.env.MIRTHSPOOL_PUBLIC_ORIGIN?.startsWith("https://")) {
+  securityHeaders.push({
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  });
+}
 
 const nextConfig: NextConfig = {
   output: "standalone",

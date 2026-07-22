@@ -12,6 +12,7 @@ import {
   createDatabaseClient,
   listDueSources,
   persistIngestionPage,
+  readIngestionOperationalMetrics,
   type DatabaseClient,
   type NormalizedContentInput,
 } from "@mirthspool/db";
@@ -103,6 +104,55 @@ describe.sequential("ingestion scheduling and persistence", () => {
         where: { sourceId: source.id, status: "RUNNING" },
       }),
     ).toBe(1);
+  });
+
+  it("aggregates successful, failed, and retried ingestion counters", async () => {
+    const source = await createSource(database);
+    const startedAt = new Date("2030-01-01T00:00:00.000Z");
+    await database.ingestionRun.createMany({
+      data: [
+        {
+          itemsCreated: 3,
+          itemsSkipped: 1,
+          providerRequests: 2,
+          sourceId: source.id,
+          startedAt,
+          status: "SUCCEEDED",
+          trigger: "SCHEDULED",
+        },
+        {
+          providerRequests: 1,
+          retries: 2,
+          sourceId: source.id,
+          startedAt,
+          status: "FAILED",
+          trigger: "RETRY",
+        },
+      ],
+    });
+    const metrics = await readIngestionOperationalMetrics(database, startedAt);
+    expect(
+      [...metrics].sort((left, right) =>
+        left.status.localeCompare(right.status),
+      ),
+    ).toEqual([
+      {
+        count: 1,
+        duplicates: 0,
+        imported: 0,
+        providerRequests: 1,
+        retries: 2,
+        status: "FAILED",
+      },
+      {
+        count: 1,
+        duplicates: 1,
+        imported: 3,
+        providerRequests: 2,
+        retries: 0,
+        status: "SUCCEEDED",
+      },
+    ]);
   });
 
   it("keeps idempotent content and checkpoints transaction-safe across redelivery", async () => {

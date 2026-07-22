@@ -18,6 +18,7 @@ describe("server configuration", () => {
         REDIS_URL: "redis://redis:6379",
       }),
     ).toEqual({
+      auditRetentionDays: 365,
       client: { publicOrigin: "https://mirthspool.invalid" },
       completedJobRetentionSeconds: 3_600,
       databaseUrl: "postgresql://user:password@postgres:5432/mirthspool",
@@ -34,9 +35,11 @@ describe("server configuration", () => {
       mediaCacheConcurrency: 2,
       mediaStoragePath: "/var/lib/mirthspool/media",
       nodeEnvironment: "development",
+      orphanRetentionDays: 30,
       port: 3_000,
       redisUrl: "redis://redis:6379",
       schedulerIntervalMs: 15_000,
+      sessionRetentionDays: 30,
       workerHeartbeatIntervalMs: 10_000,
     });
   });
@@ -124,7 +127,7 @@ describe("authentication configuration", () => {
       publicOrigin: "https://mirthspool.invalid",
       secret: "0123456789abcdef0123456789abcdef",
       secureCookies: true,
-      trustProxy: false,
+      trustedProxyAddresses: [],
     });
 
     expect(() =>
@@ -139,10 +142,13 @@ describe("authentication configuration", () => {
     const config = parseAuthConfig({
       MIRTHSPOOL_AUTH_SECRET: "abcdef0123456789abcdef0123456789",
       MIRTHSPOOL_PUBLIC_ORIGIN: "http://127.0.0.1:3000",
-      MIRTHSPOOL_TRUST_PROXY: "true",
+      MIRTHSPOOL_TRUSTED_PROXY_IPS: "192.0.2.10,2001:db8::10",
     });
 
-    expect(config.trustProxy).toBe(true);
+    expect(config.trustedProxyAddresses).toEqual([
+      "192.0.2.10",
+      "2001:db8::10",
+    ]);
     expect(config.secureCookies).toBe(false);
   });
 });
