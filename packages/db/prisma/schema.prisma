@@ -266,6 +266,7 @@ model ContentItem {
   canonicalUrl          String?
   canonicalUrlHash      String?
   rankingScore          Float           @default(0)
+  randomKey             Int             @default(0)
   searchText            String?
   duplicateGroupId      String?         @db.Uuid
   createdAt             DateTime        @default(now()) @db.Timestamptz(3)
@@ -279,8 +280,9 @@ model ContentItem {
   duplicateLinksFrom    DuplicateLink[] @relation("DuplicateFrom")
   duplicateLinksTo      DuplicateLink[] @relation("DuplicateTo")
 
-  @@index([status, publishedAt(sort: Desc)])
-  @@index([rankingScore(sort: Desc), publishedAt(sort: Desc)])
+  @@index([status, publishedAt(sort: Desc), id(sort: Desc)], map: "ContentItem_feed_new_idx")
+  @@index([status, rankingScore(sort: Desc), publishedAt(sort: Desc), id(sort: Desc)], map: "ContentItem_feed_hot_idx")
+  @@index([status, randomKey, id], map: "ContentItem_feed_random_idx")
   @@index([canonicalUrlHash])
   @@index([duplicateGroupId])
 }

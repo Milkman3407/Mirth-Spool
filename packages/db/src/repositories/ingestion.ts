@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import type {
@@ -7,6 +8,7 @@ import type {
   RunTrigger,
 } from "../generated/prisma/client.js";
 import type { NormalizedContentInput } from "./content.js";
+import { contentRandomKey, hotRankingCoordinate } from "../feed-ranking.js";
 
 const checkpointScope = "poll";
 
@@ -94,6 +96,10 @@ export async function persistIngestionPage(
   z.number().int().min(0).max(200).parse(input.items.length);
   return client.$transaction(
     async (transaction) => {
+      const source = await transaction.source.findUniqueOrThrow({
+        select: { priority: true },
+        where: { id: input.sourceId },
+      });
       let created = 0;
       let updated = 0;
       for (const item of input.items) {
@@ -113,7 +119,7 @@ export async function persistIngestionPage(
             where: { id: existing.id },
           });
           await transaction.contentItem.update({
-            data: contentData(item, now),
+            data: contentData(item, now, source.priority),
             where: { id: existing.contentItemId },
           });
           await transaction.mediaAsset.deleteMany({
@@ -122,8 +128,13 @@ export async function persistIngestionPage(
           await createMedia(transaction, existing.contentItemId, item);
           updated += 1;
         } else {
+          const contentId = randomUUID();
           const content = await transaction.contentItem.create({
-            data: contentData(item, now),
+            data: {
+              ...contentData(item, now, source.priority),
+              id: contentId,
+              randomKey: contentRandomKey(contentId),
+            },
           });
           const occurrence = await transaction.sourcePost.create({
             data: {
@@ -248,7 +259,11 @@ export function cleanupIngestionRuns(client: PrismaClient, olderThan: Date) {
   });
 }
 
-function contentData(item: NormalizedContentInput, now: Date) {
+function contentData(
+  item: NormalizedContentInput,
+  now: Date,
+  sourcePriority: number,
+) {
   return {
     authorName: item.authorName ?? null,
     canonicalUrl: item.canonicalUrl ?? null,
@@ -258,6 +273,11 @@ function contentData(item: NormalizedContentInput, now: Date) {
     lastSeenAt: now,
     normalizedTitle: item.normalizedTitle ?? null,
     publishedAt: item.publishedAt,
+    rankingScore: hotRankingCoordinate({
+      providerScore: item.providerScore,
+      publishedAt: item.publishedAt,
+      sourcePriority,
+    }),
     status: item.status ?? ("ACTIVE" as const),
     summary: item.summary ?? null,
     title: item.title ?? null,
