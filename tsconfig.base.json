@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "allowJs": false,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@mirthspool/config/*": ["./packages/config/dist/*"],
+      "@mirthspool/connectors": ["./packages/connectors/dist/index.d.ts"],
+      "@mirthspool/db": ["./packages/db/dist/index.d.ts"],
+      "@mirthspool/redis": ["./packages/redis/dist/index.d.ts"],
+      "@mirthspool/shared": ["./packages/shared/dist/index.d.ts"],
+      "@mirthspool/ui": ["./packages/ui/dist/index.d.ts"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2024",
+    "verbatimModuleSyntax": true
+  }
+}

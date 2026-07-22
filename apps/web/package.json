@@ -1,0 +1,30 @@
+{
+  "name": "@mirthspool/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "2.0.2",
+    "@mirthspool/config": "workspace:*",
+    "@mirthspool/connectors": "workspace:*",
+    "@mirthspool/db": "workspace:*",
+    "@mirthspool/redis": "workspace:*",
+    "@mirthspool/shared": "workspace:*",
+    "better-auth": "1.6.23",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "server-only": "0.0.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
+  }
+}
