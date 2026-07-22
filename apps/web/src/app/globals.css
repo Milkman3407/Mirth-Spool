@@ -831,6 +831,96 @@ video.feed-media {
     animation: none;
   }
 }
+
+.content-actions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.content-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.action-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.85rem;
+}
+
+.action-button:hover,
+.action-active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.action-button:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.action-error {
+  color: #ff9b9b;
+  margin: 0;
+}
+
+.action-toast {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 0.8rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 auto 1rem;
+  max-width: 48rem;
+  padding: 0.75rem 1rem;
+  position: sticky;
+  top: 0.75rem;
+  z-index: 5;
+}
+
+.action-toast-error {
+  border-color: #ff7d7d;
+}
+
+.library-page,
+.settings-page {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding: 1.25rem;
+}
+
+.library-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0;
+}
+
+.history-settings {
+  max-width: 44rem;
+}
+
+.setting-toggle {
+  align-items: center;
+  display: flex;
+  font-weight: 700;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.setting-toggle input {
+  height: 1.35rem;
+  width: 1.35rem;
+}
 .source-card h3,
 .source-card header p {
   margin: 0;
