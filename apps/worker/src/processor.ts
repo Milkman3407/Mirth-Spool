@@ -5,6 +5,7 @@ import {
   type ConnectorHttpClient,
   type ConnectorLogger,
   type ConnectorRegistry,
+  type ConnectorTokenCache,
   type HardenedHttpRequest,
   type HardenedHttpResponse,
   connectorPageSchema,
@@ -45,6 +46,7 @@ export interface ProcessorDependencies {
   readonly now?: () => Date;
   readonly registry: ConnectorRegistry;
   readonly shutdownSignal: AbortSignal;
+  readonly tokenCache?: ConnectorTokenCache;
 }
 
 export class RetryableIngestionError extends Error {
@@ -114,6 +116,7 @@ export function createSourcePollProcessor(dependencies: ProcessorDependencies) {
       let checkpoint: unknown =
         claimed.source.checkpoints[0]?.valueJson ?? null;
       let hasMore = true;
+      let rateLimitResetAt: Date | undefined;
       while (hasMore) {
         assertWithinLimits(controller.signal, stats, dependencies.limits);
         if (stats.pagesFetched >= dependencies.limits.maxPages) {
@@ -124,10 +127,13 @@ export function createSourcePollProcessor(dependencies: ProcessorDependencies) {
             {
               abortSignal: controller.signal,
               clock: { now },
-              credentials: Object.freeze(credentials),
+              credentials,
               http,
               limits: dependencies.limits,
               logger: dependencies.logger,
+              ...(dependencies.tokenCache
+                ? { tokenCache: dependencies.tokenCache }
+                : {}),
             },
             claimed.source.configJson,
             checkpoint,
@@ -156,6 +162,11 @@ export function createSourcePollProcessor(dependencies: ProcessorDependencies) {
         stats.itemsUpdated += persisted.updated;
         checkpoint = page.nextCheckpoint;
         hasMore = page.hasMore;
+        if (page.rateLimit?.remaining === 0 && page.rateLimit.resetAt) {
+          const reset = new Date(page.rateLimit.resetAt);
+          if (!rateLimitResetAt || reset > rateLimitResetAt)
+            rateLimitResetAt = reset;
+        }
         if (hasMore && checkpoint === null) {
           throw new ConnectorError("MALFORMED_RESPONSE", {
             code: "SOURCE_CHECKPOINT_MISSING",
@@ -166,8 +177,12 @@ export function createSourcePollProcessor(dependencies: ProcessorDependencies) {
       await finalizeIngestionRun(dependencies.database, {
         finishedAt,
         nextPollAt: new Date(
-          finishedAt.valueOf() + claimed.source.pollIntervalSeconds * 1_000,
+          Math.max(
+            finishedAt.valueOf() + claimed.source.pollIntervalSeconds * 1_000,
+            rateLimitResetAt?.valueOf() ?? 0,
+          ),
         ),
+        ...(rateLimitResetAt ? { rateLimitResetAt } : {}),
         runId: claimed.run.id,
         sourceStatus: "ACTIVE",
         stats,

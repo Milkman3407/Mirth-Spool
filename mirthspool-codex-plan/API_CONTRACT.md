@@ -275,7 +275,9 @@ export interface ConnectorPage<TCheckpoint> {
 }
 ```
 
-`ConnectorContext` supplies a hardened HTTP client, logger, clock, credentials, limits, and cancellation signal. Connectors must not instantiate unrestricted HTTP clients directly.
+`ConnectorContext` supplies a hardened HTTP client, logger, clock, credentials,
+limits, cancellation signal, and an optional short-lived OAuth token-cache
+boundary. Connectors must not instantiate unrestricted HTTP clients directly.
 
 ## 11. Versioning
 

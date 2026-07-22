@@ -1,0 +1,26 @@
+{
+  "kind": "Listing",
+  "data": {
+    "after": null,
+    "children": [
+      {
+        "kind": "t3",
+        "data": {
+          "id": "page2",
+          "name": "t3_page2",
+          "title": "Second page",
+          "author": "fixture_author",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/page2/second/",
+          "url": "https://i.redd.it/page2.webp",
+          "created_utc": 1700000800,
+          "score": 25,
+          "num_comments": 1,
+          "over_18": false,
+          "spoiler": false,
+          "stickied": false
+        }
+      }
+    ]
+  }
+}

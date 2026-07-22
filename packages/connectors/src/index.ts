@@ -4,6 +4,7 @@ export * from "./ip-policy.js";
 export * from "./lemmy.js";
 export * from "./mastodon.js";
 export * from "./registry.js";
+export * from "./reddit.js";
 export * from "./rss.js";
 export * from "./schemas.js";
 export * from "./types.js";
