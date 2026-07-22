@@ -21,6 +21,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     request,
   }) => {
     await page.goto("/setup");
+    await expectAccessible(page);
     await page.getByLabel("Display name").fill(administrator.name);
     await page.getByLabel("Email address").fill(administrator.email);
     await page.getByLabel("Password").fill(administrator.password);
@@ -39,6 +40,7 @@ test.describe.serial("private setup, sources, and feed", () => {
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL("/login");
+    await expectAccessible(page);
     await page.getByLabel("Email address").fill(administrator.email);
     await page.getByLabel("Password").fill("Definitely-Wrong-Password-44!");
     await page.getByRole("button", { name: "Sign in" }).click();
@@ -51,6 +53,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(page).toHaveURL("/");
 
     await page.goto("/sources");
+    await expectAccessible(page);
     await page.getByLabel("Display name").first().fill("Fixture RSS feed");
     await page
       .getByLabel("Feed URL")
@@ -164,6 +167,29 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(linkOnlyCard.getByText("Link-only post")).toBeVisible();
     await expect(page.locator("img[loading=lazy]").first()).toBeVisible();
 
+    const positionTargetCard = cards.nth(8);
+    const positionTargetId =
+      await positionTargetCard.getAttribute("data-content-id");
+    expect(positionTargetId).toBeTruthy();
+    const positionTarget = positionTargetCard.getByRole("link", {
+      name: "View details",
+    });
+    await positionTarget.scrollIntoViewIfNeeded();
+    const savedFeedPosition = await page.evaluate<number>("window.scrollY");
+    expect(savedFeedPosition).toBeGreaterThan(0);
+    const positionUrl = new URL(page.url());
+    const feedPositionKey = `mirthspool:scroll:${positionUrl.pathname}${positionUrl.search}`;
+    await positionTarget.click();
+    const storedFeedPosition = await page.evaluate<number>(
+      `Number.parseInt(window.sessionStorage.getItem(${JSON.stringify(feedPositionKey)}) ?? "", 10)`,
+    );
+    expect(storedFeedPosition).toBeGreaterThanOrEqual(savedFeedPosition - 1);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.locator(`#feed-item-${positionTargetId!}`),
+    ).toBeAttached();
+
     await page.getByRole("link", { name: "Hot" }).click();
     await expect(page).toHaveURL(/mode=hot/);
     await expect(page.locator(".ranking-note").first()).toBeVisible();
@@ -189,7 +215,12 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(original).toHaveAttribute("referrerpolicy", "no-referrer");
     const detailAccessibility = await new AxeBuilder({ page }).analyze();
     expect(detailAccessibility.violations).toEqual([]);
-    await page.getByRole("link", { name: /Back to feed/ }).click();
+    await page.goBack();
+    await expect(page).toHaveURL(/mediaKind=IMAGE/);
+    await page.goForward();
+    await expect(page).toHaveURL(/\/content\/[0-9a-f-]+/);
+    await page.goBack();
+    await expect(page).toHaveURL(/mediaKind=IMAGE/);
 
     await page.getByText("Filter this feed").click();
     await page.getByLabel("Tag").fill("definitely-no-matches");
@@ -228,9 +259,10 @@ test.describe.serial("private setup, sources, and feed", () => {
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
 
-    await page.keyboard.press("Home");
-    await page.keyboard.press("Tab");
-    await expect(page.locator(":focus")).toHaveCount(1);
+    const skipLink = page.getByRole("link", { name: "Skip to content" });
+    await skipLink.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("main#main-content")).toBeFocused();
     await page.emulateMedia({ reducedMotion: "reduce" });
     expect(
       await page.evaluate<boolean>(
@@ -238,14 +270,53 @@ test.describe.serial("private setup, sources, and feed", () => {
       ),
     ).toBe(true);
 
-    await page.setViewportSize({ height: 844, width: 390 });
-    await expect(page.locator("article.feed-card").first()).toBeVisible();
-    const bounds = await page
-      .locator("article.feed-card")
-      .first()
-      .boundingBox();
-    expect(bounds?.width).toBeLessThanOrEqual(390);
+    for (const viewport of [
+      { height: 568, width: 320 },
+      { height: 932, width: 430 },
+      { height: 1024, width: 768 },
+      { height: 900, width: 1280 },
+    ]) {
+      await page.setViewportSize(viewport);
+      expect(
+        await page.evaluate<boolean>(
+          "document.documentElement.scrollWidth <= window.innerWidth",
+        ),
+      ).toBe(true);
+    }
+    await page.setViewportSize({ height: 568, width: 320 });
+    await page.evaluate('document.documentElement.style.fontSize = "200%"');
+    expect(
+      await page.evaluate<boolean>(
+        "document.documentElement.scrollWidth <= window.innerWidth",
+      ),
+    ).toBe(true);
+    await page.evaluate('document.documentElement.style.fontSize = ""');
+    const mobileTargets = page.locator(".mobile-nav a, .mobile-nav summary");
+    for (let index = 0; index < (await mobileTargets.count()); index += 1) {
+      const bounds = await mobileTargets.nth(index).boundingBox();
+      expect(bounds?.height).toBeGreaterThanOrEqual(44);
+      expect(bounds?.width).toBeGreaterThanOrEqual(44);
+    }
     expect(await page.locator('input[type="file"]').count()).toBe(0);
+
+    await ensureServiceWorkerControl(page);
+    const cachedUrls = await page.evaluate<string[]>(`(async () => {
+      const keys = await caches.keys();
+      return (await Promise.all(keys.map(async (key) => (await caches.open(key)).keys())))
+        .flat()
+        .map((request) => request.url);
+    })()`);
+    expect(cachedUrls.some((url) => /\/api\/|\/content\//u.test(url))).toBe(
+      false,
+    );
+    await page.context().setOffline(true);
+    await page.goto("/offline-recovery-check");
+    await expect(
+      page.getByRole("heading", { name: "MirthSpool is offline" }),
+    ).toBeVisible();
+    await page.context().setOffline(false);
+    await page.getByRole("link", { name: "Try again" }).click();
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test("persists favorites, hidden items, history, and optimistic failures", async ({
@@ -299,6 +370,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     ).toBeVisible();
 
     await page.goto("/library/favorites");
+    await expectAccessible(page);
     await expect(
       page.getByRole("heading", { name: "Favorites" }),
     ).toBeVisible();
@@ -374,6 +446,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(page.getByText("Deterministic fixture image")).toBeVisible();
 
     await page.goto("/settings");
+    await expectAccessible(page);
     const history = page.getByRole("checkbox", {
       name: "Keep detailed view history",
     });
@@ -415,6 +488,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     }
 
     await page.goto("/search");
+    await expectAccessible(page);
     await page
       .getByLabel("Search titles, authors, communities, sources, and tags")
       .fill("Fixture post");
@@ -536,7 +610,11 @@ test.describe.serial("private setup, sources, and feed", () => {
       await expect(
         card.getByRole("group", { name: "Content warning" }),
       ).toContainText("Flashing & synthetic");
-      await card.getByRole("button", { name: "Reveal this item" }).click();
+      const revealButton = card.getByRole("button", {
+        name: "Reveal this item",
+      });
+      await revealButton.focus();
+      await page.keyboard.press("Enter");
       await expect(
         card.getByRole("button", { name: "Hide restricted media" }),
       ).toBeVisible();
@@ -776,4 +854,21 @@ async function signIn(page: Page) {
   await page.getByLabel("Password").fill(administrator.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/");
+}
+
+async function expectAccessible(page: Page) {
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+}
+
+async function ensureServiceWorkerControl(page: Page) {
+  await page.evaluate("navigator.serviceWorker.ready");
+  if (
+    !(await page.evaluate<boolean>(
+      "Boolean(navigator.serviceWorker.controller)",
+    ))
+  ) {
+    await page.reload();
+    await page.waitForFunction("Boolean(navigator.serviceWorker.controller)");
+  }
 }

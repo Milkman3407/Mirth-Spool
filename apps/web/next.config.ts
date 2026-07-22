@@ -39,7 +39,16 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["pg", "redis"],
   async headers() {
-    return [{ headers: securityHeaders, source: "/:path*" }];
+    return [
+      { headers: securityHeaders, source: "/:path*" },
+      {
+        headers: [
+          { key: "Cache-Control", value: "no-cache" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+        source: "/sw.js",
+      },
+    ];
   },
 };
 

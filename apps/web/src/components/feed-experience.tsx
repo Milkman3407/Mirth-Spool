@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -37,6 +38,11 @@ export function FeedExperience({
   >(null);
   const inFlight = useRef<AbortController | null>(null);
   const sentinel = useRef<HTMLDivElement | null>(null);
+
+  const pathname = usePathname() ?? "/";
+  const searchParameters = useSearchParams();
+  const visibleQuery = searchParameters?.toString() ?? "";
+  useFeedPosition(`${pathname}${visibleQuery ? `?${visibleQuery}` : ""}`);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || !cursor || inFlight.current) return;
@@ -224,6 +230,37 @@ export function FeedExperience({
       </div>
     </section>
   );
+}
+
+function useFeedPosition(routeKey: string) {
+  useEffect(() => {
+    const key = `mirthspool:scroll:${routeKey}`;
+    const saved = Number.parseInt(window.sessionStorage.getItem(key) ?? "", 10);
+    const restoreTimer =
+      Number.isFinite(saved) && saved >= 0
+        ? window.setTimeout(() => window.scrollTo({ top: saved }), 250)
+        : undefined;
+    let saveFrame: number | undefined;
+    const save = () =>
+      window.sessionStorage.setItem(key, String(window.scrollY));
+    const queueSave = () => {
+      if (saveFrame !== undefined) return;
+      saveFrame = window.requestAnimationFrame(() => {
+        saveFrame = undefined;
+        save();
+      });
+    };
+    document.addEventListener("click", save, { capture: true });
+    window.addEventListener("scroll", queueSave, { passive: true });
+    window.addEventListener("pagehide", save);
+    return () => {
+      if (restoreTimer !== undefined) window.clearTimeout(restoreTimer);
+      if (saveFrame !== undefined) window.cancelAnimationFrame(saveFrame);
+      document.removeEventListener("click", save, { capture: true });
+      window.removeEventListener("scroll", queueSave);
+      window.removeEventListener("pagehide", save);
+    };
+  }, [routeKey]);
 }
 
 function insertAt(

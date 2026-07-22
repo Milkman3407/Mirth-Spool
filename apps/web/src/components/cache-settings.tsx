@@ -164,7 +164,7 @@ export function CacheSettings({
         raster images or videos referenced by accepted content.
       </p>
 
-      <div className="health-grid" aria-label="Cache health">
+      <dl className="health-grid" aria-label="Cache health">
         <div>
           <dt>Storage</dt>
           <dd>{cache.storageHealthy ? "Available" : "Unavailable"}</dd>
@@ -192,7 +192,7 @@ export function CacheSettings({
             {cache.counts.failed} / {cache.counts.blocked}
           </dd>
         </div>
-      </div>
+      </dl>
       <progress aria-label="Cache quota used" max={100} value={usedPercent} />
 
       <div className="form-grid">
