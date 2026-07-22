@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { beginHttpRequest, finishHttpRequest } from "./operational-metrics";
+
 const responseHeaders = (requestId: string): Record<string, string> => ({
   "Cache-Control": "no-store",
   "Content-Type": "application/json; charset=utf-8",
@@ -7,16 +9,17 @@ const responseHeaders = (requestId: string): Record<string, string> => ({
 });
 
 export function requestIdFrom(request: Request): string {
-  const supplied = request.headers.get("x-request-id");
-  return supplied && /^[A-Za-z0-9_-]{8,80}$/u.test(supplied)
-    ? supplied
-    : `req_${randomUUID()}`;
+  void request;
+  const requestId = `req_${randomUUID()}`;
+  beginHttpRequest(requestId);
+  return requestId;
 }
 
 export function apiJson(
   body: unknown,
   options: { readonly requestId: string; readonly status?: number },
 ): Response {
+  finishHttpRequest(options.requestId, options.status ?? 200);
   return Response.json(body, {
     headers: responseHeaders(options.requestId),
     status: options.status ?? 200,
@@ -32,6 +35,7 @@ export function apiError(
     readonly status: number;
   },
 ): Response {
+  finishHttpRequest(options.requestId, options.status);
   const headers = new Headers(responseHeaders(options.requestId));
   for (const [name, value] of Object.entries(options.headers ?? {})) {
     headers.set(name, value);

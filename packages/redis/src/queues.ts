@@ -10,6 +10,7 @@ export const QUEUE_NAMES = Object.freeze({
 export type SourcePollTrigger = "MANUAL" | "RETRY" | "SCHEDULED";
 
 export interface SourcePollJobData {
+  readonly correlationId?: string;
   readonly requestedAt: string;
   readonly sourceId: string;
   readonly trigger: SourcePollTrigger;
@@ -260,6 +261,10 @@ export function assertSourcePollJobData(input: unknown): SourcePollJobData {
     throw new TypeError("Invalid source poll job.");
   }
   return Object.freeze({
+    ...(typeof value.correlationId === "string" &&
+    /^req_[0-9a-f-]{36}$/u.test(value.correlationId)
+      ? { correlationId: value.correlationId }
+      : {}),
     requestedAt: value.requestedAt,
     sourceId: value.sourceId,
     trigger: value.trigger as SourcePollTrigger,

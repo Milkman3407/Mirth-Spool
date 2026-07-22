@@ -1,4 +1,4 @@
-FROM node:24.18.0-alpine AS builder
+FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS builder
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -20,12 +20,15 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @mirthspool/worker... build
 RUN pnpm --filter @mirthspool/worker --prod deploy --legacy /prod/worker
 
-FROM node:24.18.0-alpine AS runtime
+FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
 
 ENV NODE_ENV=production
 WORKDIR /app
 
-RUN mkdir -p /var/lib/mirthspool/media && chown node:node /var/lib/mirthspool/media
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    && mkdir -p /var/lib/mirthspool/media \
+    && chown node:node /var/lib/mirthspool/media
 
 COPY --from=builder --chown=node:node /prod/worker ./
 

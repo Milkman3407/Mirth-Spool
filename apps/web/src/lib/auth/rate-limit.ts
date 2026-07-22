@@ -16,9 +16,10 @@ export interface RateLimitDecision {
 
 export function getClientAddress(
   headers: Headers,
-  trustProxy: boolean,
+  trustedProxyAddresses: readonly string[],
 ): string {
-  if (!trustProxy) {
+  const forwardingProxy = headers.get("x-mirthspool-forwarded-by")?.trim();
+  if (!forwardingProxy || !trustedProxyAddresses.includes(forwardingProxy)) {
     return "direct";
   }
   const firstForwarded = headers

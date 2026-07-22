@@ -38,8 +38,10 @@ describe("authentication rate limiting", () => {
 
   it("uses proxy addresses only when explicitly trusted", () => {
     const headers = new Headers({ "x-forwarded-for": "203.0.113.8, 10.0.0.1" });
-    expect(getClientAddress(headers, false)).toBe("direct");
-    expect(getClientAddress(headers, true)).toBe("203.0.113.8");
+    expect(getClientAddress(headers, [])).toBe("direct");
+    expect(getClientAddress(headers, ["192.0.2.10"])).toBe("direct");
+    headers.set("x-mirthspool-forwarded-by", "192.0.2.10");
+    expect(getClientAddress(headers, ["192.0.2.10"])).toBe("203.0.113.8");
   });
 
   it("produces opaque stable subjects", () => {

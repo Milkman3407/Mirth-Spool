@@ -21,10 +21,12 @@ always `HttpOnly` and `SameSite=Lax`.
 ## Reverse proxy
 
 Terminate TLS at a trusted reverse proxy and overwrite, rather than append,
-`Forwarded` or `X-Forwarded-For`. Leave `MIRTHSPOOL_TRUST_PROXY=false` unless
-that invariant is enforced and the app is not directly reachable. This setting
-only changes the address used for abuse controls; it does not relax origin or
-CSRF validation.
+`X-Forwarded-For`. List only its exact address in
+`MIRTHSPOOL_TRUSTED_PROXY_IPS`, and have it overwrite
+`X-MirthSpool-Forwarded-By` with that same address. Unlisted or missing proxy
+identities cause forwarded addresses to be ignored. The application should not
+be directly reachable. This setting only changes the address used for abuse
+controls; it does not relax origin or CSRF validation.
 
 The proxy must preserve the original `Host` and HTTPS scheme and should reject
 oversized request bodies. Only the configured public origin is trusted.
