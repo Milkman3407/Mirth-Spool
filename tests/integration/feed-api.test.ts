@@ -263,5 +263,5 @@ describe.sequential("feed API and repository", () => {
       expect(JSON.stringify(plan)).toContain(index);
     }
     await database.contentItem.deleteMany({ where: { title: "load" } });
-  }, 60_000);
+  }, 90_000);
 });

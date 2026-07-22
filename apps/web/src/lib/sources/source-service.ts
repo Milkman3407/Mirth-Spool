@@ -151,6 +151,7 @@ export async function enqueueManualSourceRefresh(
   queue: SourcePollEnqueuer,
   actorUserId: string,
   sourceId: string,
+  correlationId?: string,
 ) {
   const source = await readManagedSource(dependencies, sourceId);
   if (!source.enabled) {
@@ -169,6 +170,7 @@ export async function enqueueManualSourceRefresh(
   }
   const requestedAt = dependencies.now?.() ?? new Date();
   const reference = await enqueueSourcePoll(queue, {
+    ...(correlationId ? { correlationId } : {}),
     requestedAt: requestedAt.toISOString(),
     sourceId,
     trigger: "MANUAL",
@@ -177,7 +179,7 @@ export async function enqueueManualSourceRefresh(
     data: {
       actorUserId,
       eventType: "SOURCE_REFRESH_ENQUEUED",
-      metadataJson: { jobId: reference.id },
+      metadataJson: { correlationId, jobId: reference.id },
       targetId: sourceId,
       targetType: "Source",
     },

@@ -8,6 +8,40 @@ export interface StructuredLogger {
 type LogLevel = "debug" | "error" | "info" | "warn";
 type LogSink = (line: string) => void;
 
+const sensitiveKey =
+  /(?:authorization|cookie|credential|encryption.?key|password|secret|token)/iu;
+const urlLike = /\bhttps?:\/\/[^\s"']+/giu;
+
+export function redactLogValue(value: unknown, key = "", depth = 0): unknown {
+  if (sensitiveKey.test(key)) return "[REDACTED]";
+  if (depth >= 4) return "[TRUNCATED]";
+  if (typeof value === "string") {
+    return value.slice(0, 2_048).replace(urlLike, (candidate) => {
+      const withoutUserInfo = candidate.replace(
+        /^(https?:\/\/)(?:[^/@]+@)?/iu,
+        "$1",
+      );
+      return withoutUserInfo.split(/[?#]/u, 1)[0] ?? "[REDACTED_URL]";
+    });
+  }
+  if (Array.isArray(value)) {
+    return value
+      .slice(0, 50)
+      .map((item) => redactLogValue(item, key, depth + 1));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .slice(0, 50)
+        .map(([nestedKey, nestedValue]) => [
+          nestedKey,
+          redactLogValue(nestedValue, nestedKey, depth + 1),
+        ]),
+    );
+  }
+  return value;
+}
+
 const priorities: Readonly<Record<LogLevel, number>> = {
   debug: 10,
   info: 20,
@@ -40,7 +74,7 @@ export function createStructuredLogger(options: {
         service: options.service,
         environment: options.environment,
         event,
-        ...fields,
+        ...(redactLogValue(fields) as Record<string, unknown>),
       }),
     );
   };

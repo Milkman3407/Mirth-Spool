@@ -30,6 +30,7 @@ export * from "./repositories/cache.js";
 export * from "./repositories/duplicates.js";
 export * from "./repositories/admin-tags.js";
 export * from "./repositories/ingestion-runs.js";
+export * from "./repositories/maintenance.js";
 export * from "./repositories/ingestion.js";
 export * from "./repositories/media.js";
 export * from "./repositories/search.js";

@@ -55,7 +55,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const address = getClientAddress(request.headers, authConfig.trustProxy);
+    const address = getClientAddress(
+      request.headers,
+      authConfig.trustedProxyAddresses,
+    );
     const [ipLimit, accountLimit] = await Promise.all([
       consumeRateLimit(authenticationRateLimitStore, {
         key: `setup-ip:${hashRateLimitSubject(authConfig.secret, "setup-ip", address)}`,

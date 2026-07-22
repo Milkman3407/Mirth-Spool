@@ -36,6 +36,8 @@ jobs:
         run: pnpm typecheck
       - name: Validate Compose configuration
         env:
+          APP_ENCRYPTION_KEY: REDACTED_SYNTHETIC_FIXTURE
+          MIRTHSPOOL_AUTH_SECRET: ci-validation-only-auth-secret-000000000
           MIRTHSPOOL_DATABASE_PASSWORD: ci-validation-only-password
         run: docker compose config --quiet
       - name: Build
@@ -57,7 +59,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Run unit tests
-        run: pnpm test
+        run: pnpm build && pnpm test
 
   integration-tests:
     name: Integration tests
@@ -85,6 +87,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build web and worker images
         env:
+          APP_ENCRYPTION_KEY: REDACTED_SYNTHETIC_FIXTURE
+          MIRTHSPOOL_AUTH_SECRET: ci-build-only-auth-secret-000000000000
           MIRTHSPOOL_DATABASE_PASSWORD: ci-build-only-password
         run: docker compose build web worker
 
@@ -98,3 +102,38 @@ jobs:
           fetch-depth: 0
       - name: Scan for secrets
         uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-scan:
+    name: Production dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Audit production dependency graph
+        run: pnpm audit --prod --audit-level high
+
+  container-scan:
+    name: Production container vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build production images
+        env:
+          APP_ENCRYPTION_KEY: REDACTED_SYNTHETIC_FIXTURE
+          MIRTHSPOOL_AUTH_SECRET: ci-scan-only-auth-secret-0000000000000
+          MIRTHSPOOL_DATABASE_PASSWORD: ci-scan-only-password
+        run: docker compose build web worker
+      - name: Scan web and worker images
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL mirthspool-web:local
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL mirthspool-worker:local
