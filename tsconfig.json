@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/worker" },
+    { "path": "./packages/config" },
+    { "path": "./packages/connectors" },
+    { "path": "./packages/db" },
+    { "path": "./packages/redis" },
+    { "path": "./packages/shared" },
+    { "path": "./packages/ui" }
+  ]
+}

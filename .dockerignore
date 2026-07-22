@@ -1,0 +1,15 @@
+.git
+.github
+.pnpm-store
+.env
+.env.*
+!.env.example
+.next
+**/.next
+**/dist
+**/node_modules
+*.tsbuildinfo
+coverage
+mirthspool-codex-plan
+node_modules
+*.log

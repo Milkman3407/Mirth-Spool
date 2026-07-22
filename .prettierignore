@@ -1,0 +1,8 @@
+node_modules
+dist
+.next
+*.tsbuildinfo
+coverage
+mirthspool-codex-plan
+pnpm-lock.yaml
+packages/db/src/generated

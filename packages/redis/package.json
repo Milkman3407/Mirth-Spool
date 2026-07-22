@@ -1,0 +1,28 @@
+{
+  "name": "@mirthspool/redis",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./queues": {
+      "types": "./dist/queues.d.ts",
+      "default": "./dist/queues.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@mirthspool/shared": "workspace:*",
+    "bullmq": "5.58.5",
+    "redis": "6.1.0"
+  }
+}

@@ -36,4 +36,3 @@ See [Database and domain model](docs/DATABASE.md) for migration, rollback, and
 seed operations. See [CONTRIBUTING.md](CONTRIBUTING.md) for repository
 conventions, [authentication operations](docs/AUTHENTICATION.md), and the
 [connector security boundary](docs/CONNECTORS.md).
-
