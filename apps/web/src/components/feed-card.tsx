@@ -61,6 +61,9 @@ export function FeedCard({
       {item.summary ? <p className="feed-summary">{item.summary}</p> : null}
 
       <div className={revealed ? "media-shell" : "media-shell media-guarded"}>
+        {item.media?.cacheState === "CACHED" ? (
+          <span className="cache-badge">Cached locally</span>
+        ) : null}
         <MediaFrame
           media={item.media}
           originalUrl={originalUrl}
@@ -197,8 +200,8 @@ export function MediaFrame({
   title: string;
 }>) {
   const [failed, setFailed] = useState(false);
-  const remoteUrl = media ? safeHttpUrl(media.remoteUrl) : null;
-  const fallback = failed || !media || !remoteUrl || media.kind === "LINK";
+  const renderUrl = media ? safeMediaUrl(media.renderUrl) : null;
+  const fallback = failed || !media || !renderUrl || media.kind === "LINK";
   if (fallback)
     return (
       <div
@@ -234,12 +237,12 @@ export function MediaFrame({
         onError={() => setFailed(true)}
         playsInline
         preload="metadata"
-        src={remoteUrl}
+        src={renderUrl}
       />
     );
 
   return (
-    // Remote-only mode intentionally uses the normalized provider URL.
+    // Remote-only mode uses the provider URL; cached media uses an opaque ID.
     <img
       alt={media.altText ?? title}
       className="feed-media"
@@ -248,7 +251,7 @@ export function MediaFrame({
       loading="lazy"
       onError={() => setFailed(true)}
       referrerPolicy="no-referrer"
-      src={remoteUrl}
+      src={renderUrl}
       width={boundedDimension(media.width, 1200)}
     />
   );
@@ -264,6 +267,11 @@ export function safeHttpUrl(value: string | null | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+export function safeMediaUrl(value: string | null | undefined): string | null {
+  if (value?.match(/^\/api\/media\/[0-9a-f-]{36}$/i)) return value;
+  return safeHttpUrl(value);
 }
 
 function boundedDimension(value: number | null, fallback: number) {

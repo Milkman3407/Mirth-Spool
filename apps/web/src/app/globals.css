@@ -545,6 +545,19 @@ summary:focus-visible {
   position: relative;
 }
 
+.cache-badge {
+  background: rgb(8 11 15 / 88%);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--accent-soft);
+  font-size: 0.75rem;
+  left: 0.75rem;
+  padding: 0.3rem 0.55rem;
+  position: absolute;
+  top: 0.75rem;
+  z-index: 2;
+}
+
 .feed-media {
   display: block;
   height: auto;
@@ -907,6 +920,38 @@ video.feed-media {
 
 .history-settings {
   max-width: 44rem;
+}
+
+.settings-panel {
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+  max-width: 52rem;
+  padding-top: 1.5rem;
+}
+
+.cache-settings progress {
+  height: 0.8rem;
+  margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+.cache-settings fieldset {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+}
+
+.danger-zone {
+  border: 1px solid #7a3030;
+  border-radius: 0.75rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+}
+
+.danger-zone .danger {
+  background: #7a3030;
+  color: #fff;
+  margin-top: 0.75rem;
 }
 
 .setting-toggle {

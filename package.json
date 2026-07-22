@@ -30,6 +30,7 @@
     "@mirthspool/db": "workspace:*",
     "@mirthspool/redis": "workspace:*",
     "@mirthspool/shared": "workspace:*",
+    "@mirthspool/storage": "workspace:*",
     "@playwright/test": "1.58.2",
     "@testing-library/dom": "10.4.1",
     "@testing-library/react": "16.3.0",

@@ -13,6 +13,7 @@ COPY packages/connectors packages/connectors
 COPY packages/db packages/db
 COPY packages/redis packages/redis
 COPY packages/shared packages/shared
+COPY packages/storage packages/storage
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @mirthspool/worker... build
@@ -22,6 +23,8 @@ FROM node:24.18.0-alpine AS runtime
 
 ENV NODE_ENV=production
 WORKDIR /app
+
+RUN mkdir -p /var/lib/mirthspool/media && chown node:node /var/lib/mirthspool/media
 
 COPY --from=builder --chown=node:node /prod/worker ./
 

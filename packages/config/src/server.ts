@@ -1,4 +1,5 @@
 import process from "node:process";
+import path from "node:path";
 import { z } from "zod";
 
 import { parseClientConfig, type ClientConfig } from "./client.js";
@@ -52,6 +53,20 @@ const serverEnvironmentSchema = z.object({
   MIRTHSPOOL_LOG_LEVEL: z
     .enum(["debug", "info", "warn", "error"])
     .default("info"),
+  MIRTHSPOOL_MEDIA_CACHE_CONCURRENCY: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(8)
+    .default(2),
+  MIRTHSPOOL_MEDIA_STORAGE_PATH: z
+    .string()
+    .min(1)
+    .max(1_024)
+    .default("/var/lib/mirthspool/media")
+    .refine((value) => path.isAbsolute(value) && !value.includes("\0"), {
+      message: "must be an absolute path",
+    }),
   MIRTHSPOOL_PORT: z.coerce.number().int().min(1).max(65_535).default(3_000),
   MIRTHSPOOL_PUBLIC_ORIGIN: z.string(),
   MIRTHSPOOL_WORKER_HEARTBEAT_INTERVAL_MS: z.coerce
@@ -96,6 +111,8 @@ export interface ServerConfig {
   readonly ingestionMaxDurationMs: number;
   readonly ingestionRunRetentionDays: number;
   readonly logLevel: "debug" | "info" | "warn" | "error";
+  readonly mediaCacheConcurrency: number;
+  readonly mediaStoragePath: string;
   readonly nodeEnvironment: "development" | "test" | "production";
   readonly port: number;
   readonly redisUrl: string;
@@ -126,6 +143,8 @@ export function parseServerConfig(environment: unknown): ServerConfig {
       ingestionRunRetentionDays:
         parsed.data.MIRTHSPOOL_INGESTION_RUN_RETENTION_DAYS,
       logLevel: parsed.data.MIRTHSPOOL_LOG_LEVEL,
+      mediaCacheConcurrency: parsed.data.MIRTHSPOOL_MEDIA_CACHE_CONCURRENCY,
+      mediaStoragePath: path.resolve(parsed.data.MIRTHSPOOL_MEDIA_STORAGE_PATH),
       nodeEnvironment: parsed.data.NODE_ENV,
       port: parsed.data.MIRTHSPOOL_PORT,
       redisUrl: parsed.data.REDIS_URL,

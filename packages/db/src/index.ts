@@ -25,6 +25,7 @@ export {
   type SettingValue,
 } from "./settings.js";
 export * from "./repositories/content.js";
+export * from "./repositories/cache.js";
 export * from "./repositories/ingestion-runs.js";
 export * from "./repositories/ingestion.js";
 export * from "./repositories/media.js";

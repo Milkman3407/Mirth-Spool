@@ -15,6 +15,7 @@ COPY packages/connectors/package.json packages/connectors/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/redis/package.json packages/redis/package.json
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/storage/package.json packages/storage/package.json
 COPY packages/ui/package.json packages/ui/package.json
 
 RUN pnpm install --frozen-lockfile
@@ -31,6 +32,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV PORT=3000
 WORKDIR /app
+
+RUN mkdir -p /var/lib/mirthspool/media && chown node:node /var/lib/mirthspool/media
 
 COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static

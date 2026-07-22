@@ -335,7 +335,7 @@ model MediaAsset {
   perceptualHash      String?
   cachePolicy         CachePolicy @default(NONE)
   cacheState          CacheState  @default(REMOTE_ONLY)
-  storageKey          String?
+  storageKey          String?     @unique
   cachedAt            DateTime?   @db.Timestamptz(3)
   cacheExpiresAt      DateTime?   @db.Timestamptz(3)
   lastAccessedAt      DateTime?   @db.Timestamptz(3)
@@ -346,6 +346,7 @@ model MediaAsset {
 
   @@unique([contentItemId, ordinal])
   @@index([cacheState, lastAccessedAt])
+  @@index([cacheState, cacheExpiresAt, lastAccessedAt], map: "MediaAsset_cache_eviction_idx")
   @@index([sha256])
   @@index([perceptualHash])
 }
