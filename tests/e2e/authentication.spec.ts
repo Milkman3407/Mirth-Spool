@@ -108,6 +108,10 @@ test.describe.serial("private setup, sources, and feed", () => {
 
     const anonymous = await browser.newContext();
     const anonymousPage = await anonymous.newPage();
+    const protectedMedia = await anonymous.request.get(
+      "/api/media/00000000-0000-4000-8000-000000000001",
+    );
+    expect(protectedMedia.status()).toBe(401);
     await anonymousPage.goto("/");
     await expect(anonymousPage).toHaveURL("/login");
     const protectedApi = await anonymous.request.get("/api/feed");
@@ -243,8 +247,15 @@ test.describe.serial("private setup, sources, and feed", () => {
   test("persists favorites, hidden items, history, and optimistic failures", async ({
     page,
   }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(150_000);
     await signIn(page);
+    await page.goto("/settings");
+    await page.getByLabel("Cache policy").selectOption("FAVORITES_ONLY");
+    await page.getByRole("button", { name: "Save cache settings" }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "Cache settings saved",
+    );
+    await page.goto("/");
     let target = page
       .locator("article.feed-card")
       .filter({ hasText: "Deterministic fixture image" });
@@ -256,7 +267,26 @@ test.describe.serial("private setup, sources, and feed", () => {
     });
     await expect(removeFavorite).toBeVisible();
     await expect(removeFavorite).toBeEnabled();
+    await expect
+      .poll(
+        async () => {
+          const response = await page.request.get(
+            "/api/feed?mode=new&limit=50",
+          );
+          if (!response.ok()) return undefined;
+          const feed = feedPageSchema.parse(await response.json());
+          return feed.items.find(
+            (item) => item.title === "Deterministic fixture image",
+          )?.media?.cacheState;
+        },
+        { intervals: [5_000], timeout: 60_000 },
+      )
+      .toBe("CACHED");
     await page.reload();
+    target = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" });
+    await expect(target.getByText("Cached locally")).toBeVisible();
     target = page
       .locator("article.feed-card")
       .filter({ hasText: "Deterministic fixture image" });
@@ -634,12 +664,14 @@ test.describe.serial("private setup, sources, and feed", () => {
               media: {
                 altText: null,
                 byteLength: null,
+                cacheState: "REMOTE_ONLY",
                 durationMs: null,
                 height: null,
                 id: mediaId,
                 kind: "IMAGE",
                 mimeType: "image/png",
                 remoteUrl: "https://i.redd.it/fixture.png",
+                renderUrl: "https://i.redd.it/fixture.png",
                 width: null,
               },
               primarySource: {

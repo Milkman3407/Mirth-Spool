@@ -9,7 +9,7 @@
       <pubDate>Wed, 22 Jul 2026 12:00:00 GMT</pubDate>
       <category>fixture</category>
       <rating>safe</rating>
-      <enclosure url="http://127.0.0.1:55435/media/image.png" type="image/png" />
+      <enclosure url="http://fixture-feed:8080/media/image.png" type="image/png" />
     </item>
     <item>
       <guid>e2e-fixture-02</guid>
@@ -18,7 +18,7 @@
       <pubDate>Wed, 22 Jul 2026 11:00:00 GMT</pubDate>
       <category>fixture</category>
       <rating>safe</rating>
-      <enclosure url="http://127.0.0.1:55435/media/animated.gif" type="image/gif" />
+      <enclosure url="http://fixture-feed:8080/media/animated.gif" type="image/gif" />
     </item>
     <item>
       <guid>e2e-fixture-03</guid>
@@ -27,7 +27,7 @@
       <pubDate>Wed, 22 Jul 2026 10:00:00 GMT</pubDate>
       <category>fixture</category>
       <rating>safe</rating>
-      <enclosure url="http://127.0.0.1:55435/media/video.mp4" type="video/mp4" />
+      <enclosure url="http://fixture-feed:8080/media/video.mp4" type="video/mp4" />
     </item>
     <item>
       <guid>e2e-fixture-04</guid>
@@ -44,7 +44,7 @@
       <pubDate>Wed, 22 Jul 2026 08:00:00 GMT</pubDate>
       <category>fixture</category>
       <rating>safe</rating>
-      <enclosure url="http://127.0.0.1:55435/media/missing.png" type="image/png" />
+      <enclosure url="http://fixture-feed:8080/media/missing.png" type="image/png" />
     </item>
     <item><guid>e2e-fixture-06</guid><title>Fixture post 06</title><link>https://example.test/memes/e2e-fixture-06</link><pubDate>Wed, 22 Jul 2026 07:00:00 GMT</pubDate><category>fixture</category><rating>safe</rating></item>
     <item><guid>e2e-fixture-07</guid><title>Fixture post 07</title><link>https://example.test/memes/e2e-fixture-07</link><pubDate>Wed, 22 Jul 2026 06:00:00 GMT</pubDate><category>fixture</category><rating>safe</rating></item>

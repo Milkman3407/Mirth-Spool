@@ -43,7 +43,9 @@ services:
       fixture-feed:
         condition: service_healthy
     environment:
+      ALLOW_PRIVATE_MEDIA_URLS: "true"
       ALLOW_PRIVATE_SOURCE_URLS: "true"
+      MIRTHSPOOL_MEDIA_ALLOWED_PORTS: "8080"
       MIRTHSPOOL_SCHEDULER_INTERVAL_MS: "1000"
       MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "8080"
 

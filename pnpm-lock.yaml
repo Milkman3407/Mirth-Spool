@@ -26,6 +26,9 @@ importers:
       '@mirthspool/shared':
         specifier: workspace:*
         version: link:packages/shared
+      '@mirthspool/storage':
+        specifier: workspace:*
+        version: link:packages/storage
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2
@@ -77,6 +80,9 @@ importers:
       '@mirthspool/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@mirthspool/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@node-rs/argon2':
         specifier: 2.0.2
         version: 2.0.2
@@ -123,6 +129,9 @@ importers:
       '@mirthspool/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@mirthspool/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       bullmq:
         specifier: 5.58.5
         version: 5.58.5
@@ -186,6 +195,12 @@ importers:
         version: 6.1.0
 
   packages/shared: {}
+
+  packages/storage:
+    dependencies:
+      '@mirthspool/connectors':
+        specifier: workspace:*
+        version: link:../connectors
 
   packages/ui: {}
 

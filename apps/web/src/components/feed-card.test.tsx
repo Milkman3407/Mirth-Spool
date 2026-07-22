@@ -22,12 +22,14 @@ afterEach(() => {
 const image: FeedMedia = {
   altText: "A synthetic test image",
   byteLength: "128",
+  cacheState: "REMOTE_ONLY",
   durationMs: null,
   height: 480,
   id: "00000000-0000-4000-8000-000000000002",
   kind: "IMAGE",
   mimeType: "image/png",
   remoteUrl: "https://media.example.test/image.png",
+  renderUrl: "https://media.example.test/image.png",
   width: 640,
 };
 
@@ -81,6 +83,21 @@ describe("feed media presentation", () => {
     expect(
       screen.getByRole("link", { name: "Open original" }).getAttribute("rel"),
     ).toContain("noopener");
+  });
+
+  it("renders cached media through an opaque internal URL", () => {
+    const cached = {
+      ...image,
+      cacheState: "CACHED" as const,
+      renderUrl: `/api/media/${image.id}`,
+    };
+    render(
+      createElement(FeedCard, {
+        item: { ...item, contentRating: "SAFE", media: cached },
+      }),
+    );
+    expect(screen.getByText("Cached locally")).toBeTruthy();
+    expect(screen.getByRole("img").getAttribute("src")).toBe(cached.renderUrl);
   });
 
   it("renders video muted with controls and without autoplay", () => {

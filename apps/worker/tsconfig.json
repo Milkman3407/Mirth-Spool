@@ -12,6 +12,7 @@
     { "path": "../../packages/connectors" },
     { "path": "../../packages/db" },
     { "path": "../../packages/redis" },
-    { "path": "../../packages/shared" }
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/storage" }
   ]
 }

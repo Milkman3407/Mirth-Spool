@@ -21,6 +21,7 @@
       "@mirthspool/db": ["./packages/db/dist/index.d.ts"],
       "@mirthspool/redis": ["./packages/redis/dist/index.d.ts"],
       "@mirthspool/shared": ["./packages/shared/dist/index.d.ts"],
+      "@mirthspool/storage": ["./packages/storage/dist/index.d.ts"],
       "@mirthspool/ui": ["./packages/ui/dist/index.d.ts"]
     },
     "resolveJsonModule": true,

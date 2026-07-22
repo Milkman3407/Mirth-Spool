@@ -26,6 +26,8 @@ describe("server configuration", () => {
       ingestionMaxDurationMs: 60_000,
       ingestionRunRetentionDays: 30,
       logLevel: "info",
+      mediaCacheConcurrency: 2,
+      mediaStoragePath: "/var/lib/mirthspool/media",
       nodeEnvironment: "development",
       port: 3_000,
       redisUrl: "redis://redis:6379",
@@ -137,6 +139,7 @@ describe("source security configuration", () => {
     expect(config).toMatchObject({
       allowPrivateMediaUrls: false,
       allowPrivateSourceUrls: false,
+      allowedMediaPorts: [80, 443],
       allowedSourcePorts: [80, 443],
       encryptionKeyVersion: 1,
     });
@@ -149,11 +152,13 @@ describe("source security configuration", () => {
         ALLOW_PRIVATE_SOURCE_URLS: "true",
         APP_ENCRYPTION_KEY: encryptionKey,
         APP_ENCRYPTION_KEY_VERSION: "7",
+        MIRTHSPOOL_MEDIA_ALLOWED_PORTS: "443,9443",
         MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "443,8443",
       }),
     ).toMatchObject({
       allowPrivateMediaUrls: false,
       allowPrivateSourceUrls: true,
+      allowedMediaPorts: [443, 9443],
       allowedSourcePorts: [443, 8443],
       encryptionKeyVersion: 7,
     });

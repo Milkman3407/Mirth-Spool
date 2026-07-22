@@ -6,6 +6,7 @@ const httpUrlSchema = z
   .url()
   .max(2_048)
   .refine((value) => {
+    if (!URL.canParse(value)) return false;
     const url = new URL(value);
     return (
       ["http:", "https:"].includes(url.protocol) &&
@@ -13,6 +14,8 @@ const httpUrlSchema = z
       !url.password
     );
   });
+
+const cachedMediaUrlSchema = z.string().regex(/^\/api\/media\/[0-9a-f-]{36}$/i);
 
 export const feedModeSchema = z.enum(["new", "hot", "random", "unseen"]);
 export const mediaKindSchema = z.enum([
@@ -26,12 +29,22 @@ export const feedMediaSchema = z
   .object({
     altText: z.string().nullable(),
     byteLength: z.string().nullable(),
+    cacheState: z.enum([
+      "REMOTE_ONLY",
+      "QUEUED",
+      "FETCHING",
+      "CACHED",
+      "EVICTED",
+      "FAILED",
+      "BLOCKED",
+    ]),
     durationMs: z.number().int().nonnegative().nullable(),
     height: z.number().int().positive().nullable(),
     id: z.uuid(),
     kind: mediaKindSchema,
     mimeType: z.string().nullable(),
     remoteUrl: httpUrlSchema,
+    renderUrl: z.union([httpUrlSchema, cachedMediaUrlSchema]),
     width: z.number().int().positive().nullable(),
   })
   .passthrough();
