@@ -7,11 +7,15 @@ import {
   HardenedHttpClient,
   lemmyConnector,
   mastodonConnector,
+  redditConnector,
   rssConnector,
 } from "../../../../../packages/connectors/dist/index";
 import { loadServerConfig } from "../../../../../packages/config/dist/server";
 import { loadSourceSecurityConfig } from "../../../../../packages/config/dist/source-security";
-import { RedisFixedWindowStore } from "../../../../../packages/redis/dist/index";
+import {
+  RedisFixedWindowStore,
+  RedisOAuthTokenCache,
+} from "../../../../../packages/redis/dist/index";
 import { createSourcePollQueue } from "../../../../../packages/redis/dist/queues";
 import { createStructuredLogger } from "../../../../../packages/shared/dist/index";
 
@@ -44,6 +48,7 @@ export function getSourceServices(): SourceServices {
     rssConnector,
     lemmyConnector,
     mastodonConnector,
+    redditConnector,
   ]);
   services = Object.freeze({
     dependencies: Object.freeze({
@@ -59,6 +64,10 @@ export function getSourceServices(): SourceServices {
       ),
       logger,
       registry,
+      tokenCache: new RedisOAuthTokenCache({
+        connectTimeoutMs: Math.min(serverConfig.healthCheckTimeoutMs, 1_000),
+        url: serverConfig.redisUrl,
+      }),
     }),
     refreshRateLimitStore: new RedisFixedWindowStore({
       connectTimeoutMs: Math.min(serverConfig.healthCheckTimeoutMs, 1_000),

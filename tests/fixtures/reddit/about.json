@@ -1,0 +1,10 @@
+{
+  "kind": "t5",
+  "data": {
+    "display_name": "MirthFixtures",
+    "title": "Synthetic Mirth Fixtures",
+    "subreddit_type": "public",
+    "over18": false,
+    "quarantine": false
+  }
+}

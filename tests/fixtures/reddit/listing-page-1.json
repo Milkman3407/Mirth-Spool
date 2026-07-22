@@ -1,0 +1,206 @@
+{
+  "kind": "Listing",
+  "data": {
+    "after": "t3_page2",
+    "children": [
+      {
+        "kind": "t3",
+        "data": {
+          "id": "img1",
+          "name": "t3_img1",
+          "title": "Direct image",
+          "author": "fixture_author",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/img1/direct_image/",
+          "url": "https://i.redd.it/fixture.png",
+          "created_utc": 1700000000,
+          "score": 50,
+          "num_comments": 5,
+          "over_18": false,
+          "spoiler": false,
+          "stickied": false
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "gallery1",
+          "name": "t3_gallery1",
+          "title": "Gallery",
+          "author": "gallery_author",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/gallery1/gallery/",
+          "url": "https://www.reddit.com/gallery/gallery1",
+          "created_utc": 1700000100,
+          "score": 40,
+          "num_comments": 4,
+          "over_18": false,
+          "spoiler": true,
+          "stickied": false,
+          "is_gallery": true,
+          "gallery_data": {
+            "items": [{ "media_id": "g1" }, { "media_id": "g2" }]
+          },
+          "media_metadata": {
+            "g1": {
+              "status": "valid",
+              "e": "Image",
+              "m": "image/jpeg",
+              "s": {
+                "u": "https://preview.redd.it/g1.jpg?width=1200&amp;format=pjpg",
+                "x": 1200,
+                "y": 800
+              }
+            },
+            "g2": {
+              "status": "valid",
+              "e": "AnimatedImage",
+              "m": "image/gif",
+              "s": {
+                "gif": "https://preview.redd.it/g2.gif?format=mp4",
+                "x": 640,
+                "y": 480
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "video1",
+          "name": "t3_video1",
+          "title": "Hosted video",
+          "author": "video_author",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/video1/hosted_video/",
+          "url": "https://v.redd.it/video1",
+          "created_utc": 1700000200,
+          "score": 30,
+          "num_comments": 3,
+          "over_18": false,
+          "spoiler": false,
+          "stickied": false,
+          "secure_media": {
+            "reddit_video": {
+              "fallback_url": "https://v.redd.it/video1/DASH_720.mp4",
+              "height": 720,
+              "width": 1280,
+              "duration": 12,
+              "is_gif": false
+            }
+          }
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "link1",
+          "name": "t3_link1",
+          "title": "External link",
+          "author": "link_author",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/link1/external_link/",
+          "url": "https://example.net/story",
+          "created_utc": 1700000300,
+          "score": 20,
+          "num_comments": 2,
+          "over_18": false,
+          "spoiler": false,
+          "stickied": false
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "cross1",
+          "name": "t3_cross1",
+          "title": "Crosspost title",
+          "author": "crossposter",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/cross1/crosspost/",
+          "url": "https://www.reddit.com/r/original/comments/original1/original/",
+          "created_utc": 1700000400,
+          "score": 10,
+          "num_comments": 1,
+          "over_18": false,
+          "spoiler": false,
+          "stickied": false,
+          "crosspost_parent": "t3_original1",
+          "crosspost_parent_list": [
+            {
+              "id": "original1",
+              "name": "t3_original1",
+              "title": "Original title",
+              "author": "original_author",
+              "subreddit": "original",
+              "permalink": "/r/original/comments/original1/original/",
+              "url": "https://i.redd.it/original.jpg",
+              "created_utc": 1699990000,
+              "score": 100,
+              "num_comments": 10,
+              "over_18": false,
+              "spoiler": false,
+              "stickied": false
+            }
+          ]
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "adult1",
+          "name": "t3_adult1",
+          "title": "Adult flagged",
+          "author": "adult_author",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/adult1/adult/",
+          "url": "https://i.redd.it/adult.jpg",
+          "created_utc": 1700000500,
+          "score": 15,
+          "num_comments": 0,
+          "over_18": true,
+          "spoiler": false,
+          "stickied": false
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "sticky1",
+          "name": "t3_sticky1",
+          "title": "Stickied",
+          "author": "moderator",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/sticky1/sticky/",
+          "url": "https://example.net/sticky",
+          "created_utc": 1700000600,
+          "score": 999,
+          "num_comments": 0,
+          "over_18": false,
+          "spoiler": false,
+          "stickied": true
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "removed1",
+          "name": "t3_removed1",
+          "title": "[removed]",
+          "author": "[deleted]",
+          "subreddit": "MirthFixtures",
+          "permalink": "/r/MirthFixtures/comments/removed1/removed/",
+          "url": "https://i.redd.it/removed.png",
+          "created_utc": 1700000700,
+          "score": 5,
+          "num_comments": 0,
+          "over_18": false,
+          "spoiler": false,
+          "stickied": false,
+          "removed_by_category": "deleted"
+        }
+      }
+    ]
+  }
+}

@@ -316,7 +316,7 @@ describe.sequential("administrative source management", () => {
         configJson: {},
         displayName: "Credential placeholder",
         enabled: false,
-        kind: "REDDIT",
+        kind: "RSS",
         status: "PAUSED",
       },
     });

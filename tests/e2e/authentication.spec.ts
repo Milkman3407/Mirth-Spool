@@ -251,9 +251,11 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(target).toBeVisible();
 
     await target.getByRole("button", { name: "Add to favorites" }).click();
-    await expect(
-      target.getByRole("button", { name: "Remove from favorites" }),
-    ).toBeVisible();
+    const removeFavorite = target.getByRole("button", {
+      name: "Remove from favorites",
+    });
+    await expect(removeFavorite).toBeVisible();
+    await expect(removeFavorite).toBeEnabled();
     await page.reload();
     target = page
       .locator("article.feed-card")
@@ -349,7 +351,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     ).toBeVisible();
   });
 
-  test("adds public Lemmy and Mastodon sources with normalized attribution", async ({
+  test("adds public Lemmy, Mastodon, and Reddit sources with normalized attribution", async ({
     page,
   }) => {
     test.setTimeout(120_000);
@@ -449,6 +451,224 @@ test.describe.serial("private setup, sources, and feed", () => {
       const renderedMain = await page.locator("main").innerHTML();
       expect(renderedMain).not.toMatch(/onerror|alert\(1\)|<script/iu);
     }
+    // Keep all connector UI coverage in one authenticated browser session so the
+    // suite continues to exercise the production authentication rate limit.
+    const sourceId = "11111111-1111-4111-8111-111111111111";
+    const contentId = "22222222-2222-4222-8222-222222222222";
+    const mediaId = "33333333-3333-4333-8333-333333333333";
+    let redditSource: Record<string, unknown> | null = null;
+    let credentialPayload: unknown;
+    await page.route("**/api/sources", async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          json: { items: redditSource ? [redditSource] : [] },
+        });
+        return;
+      }
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      expect(JSON.stringify(body.config)).not.toMatch(
+        /client|secret|user.?agent/iu,
+      );
+      redditSource = {
+        configJson: body.config,
+        consecutiveFailures: 0,
+        credentials: [],
+        defaultContentRating: body.defaultContentRating,
+        displayName: body.displayName,
+        enabled: false,
+        id: sourceId,
+        kind: "REDDIT",
+        lastAttemptAt: null,
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        lastSuccessAt: null,
+        minimumScore: body.minimumScore,
+        pollIntervalSeconds: body.pollIntervalSeconds,
+        priority: body.priority,
+        status: "PAUSED",
+      };
+      await route.fulfill({ json: { source: redditSource }, status: 201 });
+    });
+    await page.route(
+      `**/api/sources/${sourceId}/credentials`,
+      async (route) => {
+        credentialPayload = route.request().postDataJSON();
+        (redditSource!.credentials as unknown[]) = [
+          {
+            id: "credential-summary",
+            kind: "OAUTH_CLIENT",
+            label: "primary",
+            updatedAt: "2026-07-22T18:00:00.000Z",
+          },
+        ];
+        await route.fulfill({
+          json: { credential: (redditSource!.credentials as unknown[])[0] },
+        });
+      },
+    );
+    await page.route(`**/api/sources/${sourceId}/resume`, async (route) => {
+      redditSource!.enabled = true;
+      redditSource!.status = "ACTIVE";
+      await route.fulfill({ json: { source: redditSource } });
+    });
+    await page.route(`**/api/sources/${sourceId}/runs?**`, async (route) =>
+      route.fulfill({ json: { items: [], nextCursor: null } }),
+    );
+    await page.route(`**/api/sources/${sourceId}/validate`, async (route) =>
+      route.fulfill({
+        json: {
+          result: {
+            details: {
+              apiCompatibility: "Reddit Data API (OAuth2, read scope)",
+              credentialHealth: "valid",
+              sampleItemCount: "1",
+              subreddit: "r/MirthFixtures",
+              subredditTitle: "Synthetic Mirth Fixtures",
+            },
+            message: "Connected to r/MirthFixtures.",
+            ok: true,
+          },
+        },
+      }),
+    );
+
+    await page.goto("/sources");
+    await page
+      .getByLabel("Reddit display name")
+      .fill("Fixture Reddit subreddit");
+    await page.getByLabel("Subreddit").first().fill("MirthFixtures");
+    await page.getByLabel("OAuth client ID").first().fill("fixture_client_id");
+    await page
+      .getByLabel("OAuth client secret")
+      .first()
+      .fill("fixture-client-secret-not-real");
+    await page
+      .getByLabel("Reddit User-Agent")
+      .first()
+      .fill("linux:mirthspool:v0.1 (by /u/fixture_admin)");
+    await page.getByLabel("Enable after securely storing credentials").check();
+    await page.getByRole("button", { name: "Add Reddit source" }).click();
+    const redditCard = page
+      .locator("article.source-card")
+      .filter({ hasText: "Fixture Reddit subreddit" });
+    await expect(redditCard).toContainText("REDDIT");
+    expect(credentialPayload).toMatchObject({
+      kind: "OAUTH_CLIENT",
+      label: "primary",
+    });
+    await redditCard.getByRole("button", { name: "Validate" }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "OAuth credential health is valid",
+    );
+
+    const database = createDatabaseClient({
+      connectionString: process.env.DATABASE_URL!,
+    });
+    try {
+      await database.source.create({
+        data: {
+          configJson: { subreddit: "MirthFixtures" },
+          defaultContentRating: "SAFE",
+          displayName: "Fixture Reddit subreddit",
+          enabled: true,
+          id: sourceId,
+          kind: "REDDIT",
+          status: "ACTIVE",
+        },
+      });
+      await database.contentItem.create({
+        data: {
+          authorName: "fixture_author",
+          contentRating: "SAFE",
+          id: contentId,
+          publishedAt: new Date("2026-07-22T18:00:00.000Z"),
+          title: "Synthetic Reddit image",
+        },
+      });
+      const sourcePost = await database.sourcePost.create({
+        data: {
+          contentItemId: contentId,
+          externalId: "t3_img1",
+          providerAuthor: "fixture_author",
+          providerPublishedAt: new Date("2026-07-22T18:00:00.000Z"),
+          providerUrl:
+            "https://www.reddit.com/r/MirthFixtures/comments/img1/direct_image/",
+          sourceId,
+        },
+      });
+      await database.contentItem.update({
+        data: { primarySourcePostId: sourcePost.id },
+        where: { id: contentId },
+      });
+      await database.mediaAsset.create({
+        data: {
+          contentItemId: contentId,
+          id: mediaId,
+          kind: "IMAGE",
+          mimeType: "image/png",
+          ordinal: 0,
+          remoteUrl: "https://i.redd.it/fixture.png",
+        },
+      });
+    } finally {
+      await database.$disconnect();
+    }
+
+    await page.route("**/api/feed?**", async (route) =>
+      route.fulfill({
+        json: {
+          hasMore: false,
+          items: [
+            {
+              actionState: {
+                favorite: false,
+                hidden: false,
+                view: null,
+                viewed: false,
+              },
+              alternateSourceCount: 0,
+              authorName: "fixture_author",
+              contentRating: "SAFE",
+              contentWarning: null,
+              id: contentId,
+              media: {
+                altText: null,
+                byteLength: null,
+                durationMs: null,
+                height: null,
+                id: mediaId,
+                kind: "IMAGE",
+                mimeType: "image/png",
+                remoteUrl: "https://i.redd.it/fixture.png",
+                width: null,
+              },
+              primarySource: {
+                displayName: "Fixture Reddit subreddit",
+                kind: "REDDIT",
+                providerUrl:
+                  "https://www.reddit.com/r/MirthFixtures/comments/img1/direct_image/",
+                sourceId,
+              },
+              publishedAt: "2026-07-22T18:00:00.000Z",
+              summary: null,
+              title: "Synthetic Reddit image",
+            },
+          ],
+          nextCursor: null,
+        },
+      }),
+    );
+    await page.goto("/");
+    const feedCard = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Synthetic Reddit image" });
+    await expect(feedCard).toContainText("Fixture Reddit subreddit");
+    await expect(
+      feedCard.getByRole("link", { name: "Open original" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.reddit.com/r/MirthFixtures/comments/img1/direct_image/",
+    );
   });
 });
 

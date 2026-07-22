@@ -25,6 +25,7 @@ export interface HardenedHttpRequest {
   readonly method?: "GET" | "HEAD" | "POST";
   readonly signal?: AbortSignal;
   readonly url: string;
+  readonly userAgent?: string;
 }
 
 export interface HardenedHttpResponse {
@@ -40,6 +41,18 @@ export interface ConnectorHttpClient {
   request(input: HardenedHttpRequest): Promise<HardenedHttpResponse>;
 }
 
+export interface ConnectorOAuthToken {
+  readonly accessToken: string;
+  readonly expiresAt: string;
+}
+
+export interface ConnectorTokenCache {
+  getOrCreate(
+    key: string,
+    acquire: () => Promise<ConnectorOAuthToken>,
+  ): Promise<ConnectorOAuthToken>;
+}
+
 export interface ConnectorContext {
   readonly abortSignal: AbortSignal;
   readonly clock: ConnectorClock;
@@ -52,6 +65,7 @@ export interface ConnectorContext {
     maxRequests: number;
   }>;
   readonly logger: ConnectorLogger;
+  readonly tokenCache?: ConnectorTokenCache;
 }
 
 export interface MemeConnector<TConfig, TCheckpoint> {

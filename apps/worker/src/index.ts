@@ -7,6 +7,7 @@ import {
   HardenedHttpClient,
   lemmyConnector,
   mastodonConnector,
+  redditConnector,
   rssConnector,
 } from "@mirthspool/connectors";
 import { loadServerConfig } from "@mirthspool/config/server";
@@ -21,6 +22,7 @@ import {
   createSourcePollQueue,
   QUEUE_NAMES,
   RedisHealthProbe,
+  RedisOAuthTokenCache,
   type SourcePollJobData,
 } from "@mirthspool/redis";
 import { createStructuredLogger } from "@mirthspool/shared";
@@ -98,7 +100,12 @@ async function main(): Promise<void> {
         rssConnector,
         lemmyConnector,
         mastodonConnector,
+        redditConnector,
       ]),
+      tokenCache: new RedisOAuthTokenCache({
+        connectTimeoutMs: Math.min(config.healthCheckTimeoutMs, 1_000),
+        url: config.redisUrl,
+      }),
       shutdownSignal: shutdownController.signal,
     }),
     {
