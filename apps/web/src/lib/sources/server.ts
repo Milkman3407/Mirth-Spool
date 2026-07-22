@@ -6,6 +6,7 @@ import {
   ConnectorRegistry,
   HardenedHttpClient,
   lemmyConnector,
+  mastodonConnector,
   rssConnector,
 } from "../../../../../packages/connectors/dist/index";
 import { loadServerConfig } from "../../../../../packages/config/dist/server";
@@ -39,7 +40,11 @@ export function getSourceServices(): SourceServices {
     service: "web",
     sink: (line) => console.log(line),
   });
-  const registry = new ConnectorRegistry([rssConnector, lemmyConnector]);
+  const registry = new ConnectorRegistry([
+    rssConnector,
+    lemmyConnector,
+    mastodonConnector,
+  ]);
   services = Object.freeze({
     dependencies: Object.freeze({
       database: getAuthServices().database,

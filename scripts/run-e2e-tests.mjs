@@ -57,13 +57,11 @@ try {
     "web",
     "worker",
   ]);
-  run("pnpm", [
-    "exec",
-    "playwright",
-    "test",
-    "--config",
-    "playwright.config.ts",
-  ]);
+  run(
+    "pnpm",
+    ["exec", "playwright", "test", "--config", "playwright.config.ts"],
+    { env: { ...environment, DATABASE_URL: databaseUrl } },
+  );
 } catch (error) {
   testFailed = true;
   throw error;

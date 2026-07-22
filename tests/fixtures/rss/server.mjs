@@ -10,6 +10,21 @@ const lemmyCommunity = await readFile(
 const lemmyPosts = await readFile(
   new URL("./lemmy/posts-page-1.json", import.meta.url),
 );
+const mastodonInstance = await readFile(
+  new URL("./mastodon/instance.json", import.meta.url),
+);
+const mastodonTag = await readFile(
+  new URL("./mastodon/tag.json", import.meta.url),
+);
+const mastodonAccount = await readFile(
+  new URL("./mastodon/account.json", import.meta.url),
+);
+const mastodonHashtag = await readFile(
+  new URL("./mastodon/hashtag-page-1.json", import.meta.url),
+);
+const mastodonAccountPage = await readFile(
+  new URL("./mastodon/account-page.json", import.meta.url),
+);
 let controlledFeedFails = false;
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -22,6 +37,48 @@ const gif = Buffer.from(
 
 createServer((request, response) => {
   const requestUrl = new URL(request.url ?? "/", "http://fixture.local");
+  const mastodonResponse = (body, extraHeaders = {}) => {
+    response.writeHead(200, {
+      "content-length": String(body.byteLength),
+      "content-type": "application/json",
+      "x-ratelimit-remaining": "99",
+      ...extraHeaders,
+    });
+    response.end(body);
+  };
+  if (requestUrl.pathname === "/api/v2/instance") {
+    mastodonResponse(mastodonInstance);
+    return;
+  }
+  if (requestUrl.pathname === "/api/v1/tags/Memes") {
+    mastodonResponse(mastodonTag);
+    return;
+  }
+  if (requestUrl.pathname === "/api/v1/accounts/lookup") {
+    if (!requestUrl.searchParams.get("acct")) {
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end('{"error":"Record not found"}');
+      return;
+    }
+    mastodonResponse(mastodonAccount);
+    return;
+  }
+  if (requestUrl.pathname === "/api/v1/timelines/tag/Memes") {
+    mastodonResponse(
+      requestUrl.searchParams.has("since_id")
+        ? Buffer.from("[]")
+        : mastodonHashtag,
+    );
+    return;
+  }
+  if (requestUrl.pathname === "/api/v1/accounts/acct-41/statuses") {
+    mastodonResponse(
+      requestUrl.searchParams.has("since_id")
+        ? Buffer.from("[]")
+        : mastodonAccountPage,
+    );
+    return;
+  }
   if (requestUrl.pathname === "/api/v3/community") {
     if (
       requestUrl.searchParams.get("name") !== "memes" &&

@@ -300,6 +300,7 @@ function contentData(
 
 function occurrenceData(item: NormalizedContentInput, now: Date) {
   return {
+    boostedBy: item.boostedBy ?? null,
     externalId: item.externalId,
     communityName: item.communityName ?? null,
     lastSeenAt: now,
@@ -307,7 +308,10 @@ function occurrenceData(item: NormalizedContentInput, now: Date) {
     providerPublishedAt: item.providerPublishedAt ?? null,
     providerDeletedAt: item.providerDeletedAt ?? null,
     providerCommentCount: item.providerCommentCount ?? null,
+    providerFavouriteCount: item.providerFavouriteCount ?? null,
+    providerLanguage: item.providerLanguage ?? null,
     providerScore: item.providerScore ?? null,
+    providerShareCount: item.providerShareCount ?? null,
     providerUpdatedAt: item.providerUpdatedAt ?? null,
     providerUrl: item.providerUrl ?? null,
   };
