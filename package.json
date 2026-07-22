@@ -1,6 +1,6 @@
 {
   "name": "mirthspool",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Private, self-hosted content aggregator",
   "license": "UNLICENSED",
@@ -15,12 +15,16 @@
     "compose:logs": "docker compose logs --follow --tail=200",
     "compose:reset": "docker compose down --volumes --remove-orphans",
     "compose:up": "docker compose up --build --detach",
+    "docs:check": "node scripts/check-docs.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . && node scripts/check-server-only-imports.mjs",
+    "release:acceptance": "bash scripts/release-acceptance.sh",
+    "release:verify": "node scripts/verify-release.mjs",
     "test": "vitest run",
     "test:integration": "node scripts/run-integration-tests.mjs",
     "test:e2e": "node scripts/run-e2e-tests.mjs",
+    "test:e2e:release": "MIRTHSPOOL_E2E_RELEASE_IMAGES=true node scripts/run-e2e-tests.mjs",
     "typecheck": "pnpm -r --if-present typecheck && tsc -p tsconfig.tests.json"
   },
   "devDependencies": {
