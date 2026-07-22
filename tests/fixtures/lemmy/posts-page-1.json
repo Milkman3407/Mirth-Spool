@@ -1,0 +1,115 @@
+{
+  "posts": [
+    {
+      "post": {
+        "id": 1001,
+        "name": "Synthetic image post",
+        "url": "https://media.example.test/image.png",
+        "thumbnail_url": "https://lemmy.example/pictrs/thumb.webp",
+        "published": "2026-07-22T12:00:00.000Z",
+        "updated": "2026-07-22T12:05:00.000Z",
+        "ap_id": "https://lemmy.example/post/1001",
+        "nsfw": false,
+        "deleted": false,
+        "removed": false
+      },
+      "creator": {
+        "name": "fixture_author",
+        "actor_id": "https://lemmy.example/u/fixture_author"
+      },
+      "community": {
+        "id": 41,
+        "name": "memes",
+        "title": "Synthetic Memes",
+        "actor_id": "https://lemmy.example/c/memes",
+        "nsfw": false
+      },
+      "counts": { "comments": 4, "score": 42 },
+      "image_details": {
+        "link": "https://media.example.test/image.png",
+        "width": 640,
+        "height": 480,
+        "content_type": "image/png"
+      }
+    },
+    {
+      "post": {
+        "id": 1002,
+        "name": "Synthetic video link",
+        "url": "https://media.example.test/clip.webm",
+        "published": "2026-07-22T11:00:00.000Z",
+        "ap_id": "https://lemmy.example/post/1002",
+        "nsfw": false,
+        "deleted": false,
+        "removed": false
+      },
+      "creator": { "name": "video_author" },
+      "community": {
+        "id": 41,
+        "name": "memes",
+        "title": "Synthetic Memes",
+        "nsfw": false
+      },
+      "counts": { "comments": 2, "score": 12 }
+    },
+    {
+      "post": {
+        "id": 1003,
+        "name": "Synthetic text post",
+        "body": "A bounded text-only fixture.",
+        "published": "2026-07-22T10:00:00.000Z",
+        "ap_id": "https://lemmy.example/post/1003",
+        "nsfw": false,
+        "deleted": false,
+        "removed": false
+      },
+      "creator": { "name": "text_author" },
+      "community": {
+        "id": 41,
+        "name": "memes",
+        "title": "Synthetic Memes",
+        "nsfw": false
+      },
+      "counts": { "comments": 0, "score": 8 }
+    },
+    {
+      "post": {
+        "id": 1004,
+        "name": "Synthetic NSFW post",
+        "body": "CW: synthetic adult marker",
+        "published": "2026-07-22T09:00:00.000Z",
+        "ap_id": "https://lemmy.example/post/1004",
+        "nsfw": true,
+        "deleted": false,
+        "removed": false
+      },
+      "creator": { "name": "adult_author" },
+      "community": {
+        "id": 41,
+        "name": "memes",
+        "title": "Synthetic Memes",
+        "nsfw": false
+      },
+      "counts": { "comments": 1, "score": 5 }
+    },
+    {
+      "post": {
+        "id": 1005,
+        "name": "This title is removed",
+        "published": "2026-07-22T08:00:00.000Z",
+        "ap_id": "https://lemmy.example/post/1005",
+        "nsfw": false,
+        "deleted": false,
+        "removed": true
+      },
+      "creator": { "name": "removed_author" },
+      "community": {
+        "id": 41,
+        "name": "memes",
+        "title": "Synthetic Memes",
+        "nsfw": false
+      },
+      "counts": { "comments": 0, "score": 3 }
+    }
+  ]
+}

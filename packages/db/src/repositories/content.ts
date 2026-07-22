@@ -38,9 +38,12 @@ export interface NormalizedContentInput {
   readonly externalId: string;
   readonly providerUrl?: string | null;
   readonly providerAuthor?: string | null;
+  readonly communityName?: string | null;
   readonly providerScore?: number | null;
+  readonly providerCommentCount?: number | null;
   readonly providerPublishedAt?: Date | null;
   readonly providerUpdatedAt?: Date | null;
+  readonly providerDeletedAt?: Date | null;
   readonly rawPayload?: unknown;
   readonly title?: string | null;
   readonly normalizedTitle?: string | null;
@@ -224,14 +227,23 @@ function occurrenceCreate(
     ...(input.providerAuthor !== undefined
       ? { providerAuthor: input.providerAuthor }
       : {}),
+    ...(input.communityName !== undefined
+      ? { communityName: input.communityName }
+      : {}),
     ...(input.providerScore !== undefined
       ? { providerScore: input.providerScore }
+      : {}),
+    ...(input.providerCommentCount !== undefined
+      ? { providerCommentCount: input.providerCommentCount }
       : {}),
     ...(input.providerPublishedAt !== undefined
       ? { providerPublishedAt: input.providerPublishedAt }
       : {}),
     ...(input.providerUpdatedAt !== undefined
       ? { providerUpdatedAt: input.providerUpdatedAt }
+      : {}),
+    ...(input.providerDeletedAt !== undefined
+      ? { providerDeletedAt: input.providerDeletedAt }
       : {}),
     ...(rawPayload !== null
       ? { rawPayload: rawPayload.value, rawPayloadBytes: rawPayload.bytes }
@@ -253,14 +265,23 @@ function occurrenceUpdate(
     ...(input.providerAuthor !== undefined
       ? { providerAuthor: input.providerAuthor }
       : {}),
+    ...(input.communityName !== undefined
+      ? { communityName: input.communityName }
+      : {}),
     ...(input.providerScore !== undefined
       ? { providerScore: input.providerScore }
+      : {}),
+    ...(input.providerCommentCount !== undefined
+      ? { providerCommentCount: input.providerCommentCount }
       : {}),
     ...(input.providerPublishedAt !== undefined
       ? { providerPublishedAt: input.providerPublishedAt }
       : {}),
     ...(input.providerUpdatedAt !== undefined
       ? { providerUpdatedAt: input.providerUpdatedAt }
+      : {}),
+    ...(input.providerDeletedAt !== undefined
+      ? { providerDeletedAt: input.providerDeletedAt }
       : {}),
     ...(rawPayload !== null
       ? { rawPayload: rawPayload.value, rawPayloadBytes: rawPayload.bytes }

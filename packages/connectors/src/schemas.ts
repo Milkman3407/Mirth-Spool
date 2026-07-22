@@ -66,6 +66,10 @@ export const normalizedSourcePostSchema = z
       .nullable()
       .default(null),
     providerCreatedAt: z.iso.datetime({ offset: true }),
+    providerDeletedAt: z.iso
+      .datetime({ offset: true })
+      .nullable()
+      .default(null),
     providerScore: z.number().int().nullable().default(null),
     providerUpdatedAt: z.iso
       .datetime({ offset: true })

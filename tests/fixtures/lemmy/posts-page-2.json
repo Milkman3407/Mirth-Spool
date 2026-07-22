@@ -1,0 +1,43 @@
+{
+  "posts": [
+    {
+      "post": {
+        "id": 1005,
+        "name": "Repeated boundary post",
+        "published": "2026-07-22T08:00:00.000Z",
+        "ap_id": "https://lemmy.example/post/1005",
+        "nsfw": false,
+        "removed": true
+      },
+      "creator": { "name": "removed_author" },
+      "community": {
+        "id": 41,
+        "name": "memes",
+        "title": "Synthetic Memes",
+        "nsfw": false
+      },
+      "counts": { "comments": 0, "score": 3 }
+    },
+    {
+      "post": {
+        "id": 1006,
+        "name": "Inserted between page requests",
+        "url": "https://outside.example.test/article",
+        "thumbnail_url": "https://lemmy.example/pictrs/preview.webp",
+        "published": "2026-07-22T12:30:00.000Z",
+        "ap_id": "https://lemmy.example/post/1006",
+        "nsfw": false,
+        "deleted": false,
+        "removed": false
+      },
+      "creator": { "name": "new_author" },
+      "community": {
+        "id": 41,
+        "name": "memes",
+        "title": "Synthetic Memes",
+        "nsfw": false
+      },
+      "counts": { "comments": 1, "score": 9 }
+    }
+  ]
+}
