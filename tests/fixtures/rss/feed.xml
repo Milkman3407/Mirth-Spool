@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>E2E fixture feed</title>
+    <item>
+      <guid>e2e-fixture-1</guid>
+      <title>Deterministic fixture meme</title>
+      <link>https://example.test/memes/e2e-fixture-1</link>
+      <enclosure url="https://cdn.example.test/e2e-fixture.png" type="image/png" />
+    </item>
+  </channel>
+</rss>

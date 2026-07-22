@@ -1,0 +1,52 @@
+services:
+  fixture-feed:
+    build:
+      context: .
+      dockerfile: tests/fixtures/rss/Dockerfile
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/feed.xml').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+    networks:
+      - backend
+    ports:
+      - "127.0.0.1:55435:8080"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    ports:
+      - "127.0.0.1:55434:5432"
+
+  web:
+    depends_on:
+      fixture-feed:
+        condition: service_healthy
+    environment:
+      ALLOW_PRIVATE_SOURCE_URLS: "true"
+      MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "8080"
+    ports:
+      - "127.0.0.1:53000:3000"
+
+  worker:
+    depends_on:
+      fixture-feed:
+        condition: service_healthy
+    environment:
+      ALLOW_PRIVATE_SOURCE_URLS: "true"
+      MIRTHSPOOL_SCHEDULER_INTERVAL_MS: "1000"
+      MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "8080"
+
+networks:
+  backend:
+    internal: false
