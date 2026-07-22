@@ -2,16 +2,20 @@
 
 MirthSpool is a private, self-hosted content aggregator for administrator-selected meme-oriented sources. The project is being built milestone by milestone from the checked-in [Codex build pack](mirthspool-codex-plan/README.md).
 
-The repository includes the local runtime, PostgreSQL domain model, private
+Version 0.1.0 includes the production runtime, PostgreSQL domain model, private
 authentication, official RSS, Lemmy, Mastodon-compatible, and approved Reddit
-Data API ingestion,
-ranked browsing, private user libraries, and an optional bounded media cache
-through M13. Manual content-upload
-functionality is intentionally not present. Reddit sources require an
-operator-registered and approved OAuth client; see the
-[connector security boundary](docs/CONNECTORS.md) before enabling one.
+Data API ingestion, ranked browsing, private user libraries, bounded optional
+media caching, search/deduplication, an installable PWA, and operations and
+recovery controls. Manual content-upload functionality is intentionally absent.
 
-## Prerequisites
+## Install or develop
+
+Operators should start with the [v0.1 installation guide](docs/INSTALL.md), use
+immutable image digests from the GitHub release, and read the
+[upgrade and rollback guide](docs/UPGRADE.md). Release scope and limitations are
+in the [v0.1.0 release notes](docs/releases/v0.1.0.md).
+
+Developers need:
 
 - Node.js 24
 - pnpm 11.9.0, activated through Corepack from the `packageManager` pin
@@ -30,6 +34,9 @@ pnpm test
 pnpm build
 docker compose config
 pnpm test:integration
+pnpm test:e2e
+pnpm docs:check
+pnpm release:verify
 ```
 
 ## Selecting and executing the next milestone
@@ -47,3 +54,5 @@ in [user actions and library operations](docs/USER_ACTIONS_AND_LIBRARY.md).
 The default remote-only mode, cache policies, quotas, private-network controls,
 delivery route, eviction, and purge operations are documented in
 [media cache operations](docs/MEDIA_CACHE.md).
+Operator security, backup, restore, retention, and incident response are in
+[operations, security, and recovery](docs/OPERATIONS_SECURITY_AND_RECOVERY.md).
