@@ -1,0 +1,412 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum SourceKind {
+  RSS
+  LEMMY
+  MASTODON
+  REDDIT
+}
+
+enum SourceStatus {
+  ACTIVE
+  PAUSED
+  DEGRADED
+  AUTH_ERROR
+  CONFIG_ERROR
+}
+
+enum ContentRating {
+  SAFE
+  SENSITIVE
+  ADULT
+  UNKNOWN
+}
+
+enum ContentStatus {
+  ACTIVE
+  REMOVED_AT_SOURCE
+  BROKEN
+  SUPPRESSED
+}
+
+enum MediaKind {
+  IMAGE
+  ANIMATED_IMAGE
+  VIDEO
+  LINK
+}
+
+enum CachePolicy {
+  NONE
+  FAVORITES_ONLY
+  TTL
+  ALL_WITHIN_QUOTA
+}
+
+enum CacheState {
+  REMOTE_ONLY
+  QUEUED
+  FETCHING
+  CACHED
+  EVICTED
+  FAILED
+  BLOCKED
+}
+
+enum ActionKind {
+  FAVORITE
+  HIDE
+  VIEW
+}
+
+enum RunTrigger {
+  SCHEDULED
+  MANUAL
+  RETRY
+  BACKFILL
+}
+
+enum RunStatus {
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum CredentialKind {
+  OAUTH_CLIENT
+  ACCESS_TOKEN
+  BASIC_AUTH
+  CUSTOM
+}
+
+enum DuplicateReason {
+  CANONICAL_URL
+  SHA256
+  PERCEPTUAL_HASH
+  MANUAL
+}
+
+enum TagSource {
+  ADMIN
+  PROVIDER
+  RULE
+}
+
+model User {
+  id                 String              @id @default(uuid()) @db.Uuid
+  email              String              @unique
+  emailNormalized    String              @unique
+  emailVerified      Boolean             @default(false)
+  username           String?             @unique
+  usernameNormalized String?             @unique
+  name               String
+  image              String?
+  role               UserRole            @default(MEMBER)
+  disabledAt         DateTime?           @db.Timestamptz(3)
+  lastLoginAt        DateTime?           @db.Timestamptz(3)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  sessions           Session[]
+  credentialAccounts CredentialAccount[]
+  actions            UserAction[]
+  auditEvents        AuditEvent[]        @relation("AuditActor")
+}
+
+model Session {
+  id           String    @id @default(uuid()) @db.Uuid
+  sessionToken String    @unique
+  userId       String    @db.Uuid
+  expires      DateTime  @db.Timestamptz(3)
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  revokedAt    DateTime? @db.Timestamptz(3)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expires])
+}
+
+model CredentialAccount {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  accountId    String
+  providerId   String
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model AppSetting {
+  key           String   @id
+  value         Json
+  schemaVersion Int      @default(1)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model Source {
+  id                    String             @id @default(uuid()) @db.Uuid
+  kind                  SourceKind
+  displayName           String
+  enabled               Boolean            @default(true)
+  status                SourceStatus       @default(ACTIVE)
+  priority              Int                @default(0)
+  pollIntervalSeconds   Int                @default(900)
+  defaultContentRating  ContentRating      @default(UNKNOWN)
+  minimumScore          Int?
+  configJson            Json
+  nextPollAt            DateTime?          @db.Timestamptz(3)
+  lastAttemptAt         DateTime?          @db.Timestamptz(3)
+  lastSuccessAt         DateTime?          @db.Timestamptz(3)
+  consecutiveFailures   Int                @default(0)
+  lastErrorCode         String?
+  lastErrorMessage      String?
+  deletedAt             DateTime?          @db.Timestamptz(3)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(3)
+  credentials           SourceCredential[]
+  checkpoints           SourceCheckpoint[]
+  ingestionRuns         IngestionRun[]
+  sourcePosts           SourcePost[]
+
+  @@index([enabled, nextPollAt])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model SourceCredential {
+  id               String         @id @default(uuid()) @db.Uuid
+  sourceId         String?        @db.Uuid
+  kind             CredentialKind
+  label            String
+  encryptedPayload Bytes
+  keyVersion       Int
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+  source           Source?        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@unique([sourceId, kind, label])
+}
+
+model SourceCheckpoint {
+  id        String   @id @default(uuid()) @db.Uuid
+  sourceId  String   @db.Uuid
+  scope     String
+  valueJson Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  source    Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, scope])
+}
+
+model IngestionRun {
+  id                   String      @id @default(uuid()) @db.Uuid
+  sourceId             String      @db.Uuid
+  trigger              RunTrigger
+  status               RunStatus   @default(RUNNING)
+  jobId                 String?
+  attempt               Int         @default(1)
+  startedAt            DateTime    @default(now()) @db.Timestamptz(3)
+  finishedAt           DateTime?   @db.Timestamptz(3)
+  pagesFetched         Int         @default(0)
+  providerRequests     Int         @default(0)
+  bytesFetched         BigInt      @default(0)
+  itemsSeen            Int         @default(0)
+  itemsCreated         Int         @default(0)
+  itemsUpdated         Int         @default(0)
+  itemsSkipped         Int         @default(0)
+  retries              Int         @default(0)
+  errorCode            String?
+  errorMessage         String?
+  rateLimitResetAt     DateTime?   @db.Timestamptz(3)
+  createdAt            DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime    @updatedAt @db.Timestamptz(3)
+  source               Source      @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([sourceId, startedAt(sort: Desc)])
+  @@index([status, startedAt])
+  @@index([jobId])
+}
+
+model ContentItem {
+  id                    String          @id @default(uuid()) @db.Uuid
+  title                 String?
+  normalizedTitle       String?
+  summary               String?
+  authorName            String?
+  authorExternalId      String?
+  contentRating         ContentRating   @default(UNKNOWN)
+  contentWarning        String?
+  status                ContentStatus   @default(ACTIVE)
+  publishedAt           DateTime        @db.Timestamptz(3)
+  firstSeenAt           DateTime        @default(now()) @db.Timestamptz(3)
+  lastSeenAt            DateTime        @default(now()) @db.Timestamptz(3)
+  primarySourcePostId   String?         @unique @db.Uuid
+  canonicalUrl          String?
+  canonicalUrlHash      String?
+  rankingScore          Float           @default(0)
+  searchText            String?
+  duplicateGroupId      String?         @db.Uuid
+  createdAt             DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime        @updatedAt @db.Timestamptz(3)
+  primarySourcePost     SourcePost?     @relation("PrimarySourcePost", fields: [primarySourcePostId], references: [id], onDelete: SetNull)
+  sourcePosts           SourcePost[]    @relation("ContentOccurrences")
+  mediaAssets           MediaAsset[]
+  actions               UserAction[]
+  tags                  ContentTag[]
+  duplicateGroup        DuplicateGroup? @relation(fields: [duplicateGroupId], references: [id], onDelete: SetNull)
+  duplicateLinksFrom    DuplicateLink[] @relation("DuplicateFrom")
+  duplicateLinksTo      DuplicateLink[] @relation("DuplicateTo")
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([rankingScore(sort: Desc), publishedAt(sort: Desc)])
+  @@index([canonicalUrlHash])
+  @@index([duplicateGroupId])
+}
+
+model SourcePost {
+  id                   String       @id @default(uuid()) @db.Uuid
+  sourceId             String       @db.Uuid
+  contentItemId        String       @db.Uuid
+  externalId           String
+  providerUrl          String?
+  providerAuthor       String?
+  providerScore        Int?
+  providerPublishedAt  DateTime?    @db.Timestamptz(3)
+  providerUpdatedAt    DateTime?    @db.Timestamptz(3)
+  rawPayload           Json?
+  rawPayloadBytes      Int?
+  firstSeenAt          DateTime     @default(now()) @db.Timestamptz(3)
+  lastSeenAt           DateTime     @default(now()) @db.Timestamptz(3)
+  source               Source       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  contentItem          ContentItem  @relation("ContentOccurrences", fields: [contentItemId], references: [id], onDelete: Cascade)
+  primaryFor           ContentItem? @relation("PrimarySourcePost")
+
+  @@unique([sourceId, externalId])
+  @@index([sourceId, providerPublishedAt(sort: Desc)])
+  @@index([contentItemId])
+}
+
+model MediaAsset {
+  id                  String      @id @default(uuid()) @db.Uuid
+  contentItemId       String      @db.Uuid
+  ordinal             Int
+  kind                MediaKind
+  remoteUrl           String
+  canonicalRemoteUrl  String?
+  mimeType            String?
+  byteLength          BigInt?
+  width               Int?
+  height              Int?
+  durationMilliseconds Int?
+  sha256              String?
+  perceptualHash      String?
+  cachePolicy         CachePolicy @default(NONE)
+  cacheState          CacheState  @default(REMOTE_ONLY)
+  storageKey          String?
+  cachedAt            DateTime?   @db.Timestamptz(3)
+  cacheExpiresAt      DateTime?   @db.Timestamptz(3)
+  lastAccessedAt      DateTime?   @db.Timestamptz(3)
+  cacheErrorCode      String?
+  createdAt           DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime    @updatedAt @db.Timestamptz(3)
+  contentItem         ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@unique([contentItemId, ordinal])
+  @@index([cacheState, lastAccessedAt])
+  @@index([sha256])
+  @@index([perceptualHash])
+}
+
+model UserAction {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  contentItemId String      @db.Uuid
+  kind          ActionKind
+  occurredAt    DateTime    @default(now()) @db.Timestamptz(3)
+  metadataJson  Json?
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentItemId, kind])
+  @@index([userId, kind, occurredAt(sort: Desc)])
+  @@index([contentItemId, kind])
+}
+
+model Tag {
+  id        String       @id @default(uuid()) @db.Uuid
+  slug      String       @unique
+  label     String
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime     @updatedAt @db.Timestamptz(3)
+  content   ContentTag[]
+}
+
+model ContentTag {
+  contentItemId String      @db.Uuid
+  tagId         String      @db.Uuid
+  source        TagSource
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contentItemId, tagId, source])
+  @@index([tagId, contentItemId])
+}
+
+model DuplicateGroup {
+  id        String        @id @default(uuid()) @db.Uuid
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
+  items     ContentItem[]
+}
+
+model DuplicateLink {
+  id            String          @id @default(uuid()) @db.Uuid
+  fromContentId String          @db.Uuid
+  toContentId   String          @db.Uuid
+  reason        DuplicateReason
+  distance      Float?
+  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
+  fromContent   ContentItem     @relation("DuplicateFrom", fields: [fromContentId], references: [id], onDelete: Cascade)
+  toContent     ContentItem     @relation("DuplicateTo", fields: [toContentId], references: [id], onDelete: Cascade)
+
+  @@unique([fromContentId, toContentId, reason])
+  @@index([toContentId])
+}
+
+model AuditEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUserId  String?  @db.Uuid
+  eventType    String
+  targetType   String?
+  targetId     String?
+  metadataJson Json?
+  occurredAt   DateTime @default(now()) @db.Timestamptz(3)
+  actor        User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt(sort: Desc)])
+  @@index([actorUserId, occurredAt(sort: Desc)])
+  @@index([targetType, targetId])
+}

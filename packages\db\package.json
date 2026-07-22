@@ -1,0 +1,39 @@
+{
+  "name": "@mirthspool/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ingestion": {
+      "types": "./dist/repositories/ingestion.d.ts",
+      "default": "./dist/repositories/ingestion.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm prisma:generate && tsc -b",
+    "prisma:generate": "prisma generate --config prisma.config.ts",
+    "prisma:migrate:deploy": "prisma migrate deploy --config prisma.config.ts",
+    "prisma:seed": "prisma db seed --config prisma.config.ts",
+    "prisma:validate": "prisma validate --config prisma.config.ts",
+    "typecheck": "pnpm prisma:generate && tsc -b"
+  },
+  "dependencies": {
+    "@mirthspool/shared": "workspace:*",
+    "@prisma/adapter-pg": "7.9.0",
+    "@prisma/client": "7.9.0",
+    "pg": "8.22.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/pg": "8.20.0",
+    "prisma": "7.9.0",
+    "tsx": "4.20.6"
+  }
+}
