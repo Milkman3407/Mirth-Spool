@@ -23,6 +23,44 @@ export interface SourcePollEnqueuer {
   ): Promise<{ readonly id?: string }>;
 }
 
+export interface MediaCacheJobData {
+  readonly mediaId: string;
+  readonly requestedAt: string;
+}
+
+export interface MediaCacheEnqueuer {
+  add(
+    name: "cache",
+    data: MediaCacheJobData,
+    options: JobsOptions,
+  ): Promise<{ readonly id?: string }>;
+}
+
+export interface CacheMaintenanceJobData {
+  readonly action: "EVICT" | "PURGE";
+  readonly requestedAt: string;
+}
+
+export function assertCacheMaintenanceJobData(
+  input: unknown,
+): CacheMaintenanceJobData {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new TypeError("Invalid cache maintenance job.");
+  }
+  const value = input as Record<string, unknown>;
+  if (
+    !["EVICT", "PURGE"].includes(String(value.action)) ||
+    typeof value.requestedAt !== "string" ||
+    !Number.isFinite(Date.parse(value.requestedAt))
+  ) {
+    throw new TypeError("Invalid cache maintenance job.");
+  }
+  return Object.freeze({
+    action: value.action as "EVICT" | "PURGE",
+    requestedAt: value.requestedAt,
+  });
+}
+
 export function bullConnectionFromUrl(redisUrl: string): RedisOptions {
   const url = new URL(redisUrl);
   if (url.protocol !== "redis:" && url.protocol !== "rediss:") {
@@ -61,6 +99,71 @@ export function createSourcePollQueue(
       removeOnFail: { age: retention.failedSeconds ?? 604_800, count: 5_000 },
     },
   });
+}
+
+export function createMediaCacheQueue(
+  redisUrl: string,
+  retention: {
+    readonly completedSeconds?: number;
+    readonly failedSeconds?: number;
+  } = {},
+): Queue<MediaCacheJobData> {
+  return new Queue<MediaCacheJobData>(QUEUE_NAMES.mediaProcessing, {
+    connection: bullConnectionFromUrl(redisUrl),
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { delay: 10_000, type: "exponential" },
+      removeOnComplete: {
+        age: retention.completedSeconds ?? 3_600,
+        count: 1_000,
+      },
+      removeOnFail: { age: retention.failedSeconds ?? 604_800, count: 2_000 },
+    },
+  });
+}
+
+export function createCacheMaintenanceQueue(
+  redisUrl: string,
+): Queue<CacheMaintenanceJobData> {
+  return new Queue<CacheMaintenanceJobData>(QUEUE_NAMES.maintenance, {
+    connection: bullConnectionFromUrl(redisUrl),
+    defaultJobOptions: {
+      attempts: 1,
+      removeOnComplete: { age: 3_600, count: 100 },
+      removeOnFail: { age: 604_800, count: 100 },
+    },
+  });
+}
+
+export function assertMediaCacheJobData(input: unknown): MediaCacheJobData {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new TypeError("Invalid media cache job.");
+  }
+  const value = input as Record<string, unknown>;
+  if (
+    typeof value.mediaId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value.mediaId,
+    ) ||
+    typeof value.requestedAt !== "string" ||
+    !Number.isFinite(Date.parse(value.requestedAt))
+  ) {
+    throw new TypeError("Invalid media cache job.");
+  }
+  return Object.freeze({
+    mediaId: value.mediaId,
+    requestedAt: value.requestedAt,
+  });
+}
+
+export async function enqueueMediaCache(
+  queue: MediaCacheEnqueuer,
+  data: MediaCacheJobData,
+): Promise<{ readonly id: string }> {
+  const validated = assertMediaCacheJobData(data);
+  const jobId = `cache-${validated.mediaId}-${Date.parse(validated.requestedAt)}`;
+  const job = await queue.add("cache", validated, { jobId });
+  return Object.freeze({ id: job.id ?? jobId });
 }
 
 export function sourcePollJobId(data: SourcePollJobData): string {

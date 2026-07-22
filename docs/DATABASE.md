@@ -81,6 +81,23 @@ small first-class table so the optional group reference has referential integrit
 Authentication-compatible `User` and `Session` fields are present, but login,
 password hashing, and session issuance are deliberately not implemented in M02.
 
+## M13 media-cache migration
+
+Migration `20260723010000_media_cache_indexes` makes non-null media storage keys
+unique and adds the bounded eviction scan index on cache state, expiry, and last
+access. Existing deployments have no cached objects because M12 had no cache
+writer, so the uniqueness check requires no backfill or deduplication. Index and
+constraint creation take ordinary PostgreSQL locks; schedule the migration during
+a normal deployment window if a pre-release database has an unusually large
+`MediaAsset` table.
+
+There is no destructive down migration. For rollback, stop web and worker,
+deploy the M12 images, and leave the additive index and unique constraint in
+place. Cached files may be removed after the worker is stopped; their database
+metadata and source URLs remain non-authoritative for M12. If exact schema
+reversal is required, restore the pre-M13 database backup into a new database
+instead of dropping constraints in place.
+
 ## Synthetic seed
 
 Run the deterministic development seed with:

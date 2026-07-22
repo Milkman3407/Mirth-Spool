@@ -17,6 +17,7 @@
     "@mirthspool/db": "workspace:*",
     "@mirthspool/redis": "workspace:*",
     "@mirthspool/shared": "workspace:*",
+    "@mirthspool/storage": "workspace:*",
     "bullmq": "5.58.5"
   }
 }
