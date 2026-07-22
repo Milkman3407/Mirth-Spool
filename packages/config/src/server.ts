@@ -74,6 +74,24 @@ const serverEnvironmentSchema = z.object({
     .min(1)
     .max(365)
     .default(30),
+  MIRTHSPOOL_AUDIT_RETENTION_DAYS: z.coerce
+    .number()
+    .int()
+    .min(30)
+    .max(3_650)
+    .default(365),
+  MIRTHSPOOL_ORPHAN_RETENTION_DAYS: z.coerce
+    .number()
+    .int()
+    .min(7)
+    .max(365)
+    .default(30),
+  MIRTHSPOOL_SESSION_RETENTION_DAYS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(365)
+    .default(30),
   MIRTHSPOOL_SCHEDULER_INTERVAL_MS: z.coerce
     .number()
     .int()
@@ -133,6 +151,7 @@ export class ConfigurationError extends Error {
 }
 
 export interface ServerConfig {
+  readonly auditRetentionDays: number;
   readonly client: ClientConfig;
   readonly completedJobRetentionSeconds: number;
   readonly databaseUrl: string;
@@ -149,9 +168,11 @@ export interface ServerConfig {
   readonly mediaCacheConcurrency: number;
   readonly mediaStoragePath: string;
   readonly nodeEnvironment: "development" | "test" | "production";
+  readonly orphanRetentionDays: number;
   readonly port: number;
   readonly redisUrl: string;
   readonly schedulerIntervalMs: number;
+  readonly sessionRetentionDays: number;
   readonly workerHeartbeatIntervalMs: number;
 }
 
@@ -167,6 +188,7 @@ export function parseServerConfig(environment: unknown): ServerConfig {
 
   try {
     return Object.freeze({
+      auditRetentionDays: parsed.data.MIRTHSPOOL_AUDIT_RETENTION_DAYS,
       client: parseClientConfig(parsed.data),
       completedJobRetentionSeconds:
         parsed.data.MIRTHSPOOL_COMPLETED_JOB_RETENTION_SECONDS,
@@ -187,9 +209,11 @@ export function parseServerConfig(environment: unknown): ServerConfig {
       mediaCacheConcurrency: parsed.data.MIRTHSPOOL_MEDIA_CACHE_CONCURRENCY,
       mediaStoragePath: path.resolve(parsed.data.MIRTHSPOOL_MEDIA_STORAGE_PATH),
       nodeEnvironment: parsed.data.NODE_ENV,
+      orphanRetentionDays: parsed.data.MIRTHSPOOL_ORPHAN_RETENTION_DAYS,
       port: parsed.data.MIRTHSPOOL_PORT,
       redisUrl: parsed.data.REDIS_URL,
       schedulerIntervalMs: parsed.data.MIRTHSPOOL_SCHEDULER_INTERVAL_MS,
+      sessionRetentionDays: parsed.data.MIRTHSPOOL_SESSION_RETENTION_DAYS,
       workerHeartbeatIntervalMs:
         parsed.data.MIRTHSPOOL_WORKER_HEARTBEAT_INTERVAL_MS,
     });

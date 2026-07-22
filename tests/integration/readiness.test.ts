@@ -4,6 +4,7 @@ import process from "node:process";
 import { PostgresHealthProbe } from "@mirthspool/db";
 import { RedisHealthProbe } from "@mirthspool/redis";
 import { evaluateReadiness } from "@mirthspool/shared";
+import { LocalFilesystemStorage } from "@mirthspool/storage";
 import { afterEach, describe, expect, it } from "vitest";
 
 const databaseUrl =
@@ -61,6 +62,30 @@ describe("dependency readiness", () => {
     expect(evaluation.httpStatus).toBe(503);
     expect(evaluation.body.status).toBe("not_ready");
     expect(JSON.stringify(evaluation.body)).not.toContain("127.0.0.1");
+  });
+
+  it("returns a controlled non-ready state when storage is unavailable", async () => {
+    const storage = new LocalFilesystemStorage(
+      `/tmp/mirthspool-missing-storage-${process.pid}`,
+      { readOnly: true },
+    );
+    const ready = await storage.health();
+    const result = Object.freeze({
+      code: ready ? null : "DEPENDENCY_UNAVAILABLE",
+      ready,
+    });
+    const evaluation = evaluateReadiness(
+      [result],
+      "req_storage_unavailable",
+      new Date(0),
+    );
+
+    expect(result).toEqual({
+      code: "DEPENDENCY_UNAVAILABLE",
+      ready: false,
+    });
+    expect(evaluation.httpStatus).toBe(503);
+    expect(JSON.stringify(evaluation.body)).not.toContain("/tmp/");
   });
 });
 

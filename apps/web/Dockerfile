@@ -1,4 +1,4 @@
-FROM node:24.18.0-alpine AS dependencies
+FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS dependencies
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PNPM_HOME=/pnpm
@@ -26,7 +26,7 @@ FROM dependencies AS builder
 COPY . .
 RUN pnpm build
 
-FROM node:24.18.0-alpine AS runtime
+FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
 
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -34,7 +34,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 WORKDIR /app
 
-RUN mkdir -p /var/lib/mirthspool/media && chown node:node /var/lib/mirthspool/media
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    && mkdir -p /var/lib/mirthspool/media \
+    && chown node:node /var/lib/mirthspool/media
 
 COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static

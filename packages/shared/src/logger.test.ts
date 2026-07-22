@@ -26,4 +26,23 @@ describe("structured logger", () => {
       timestamp: "2026-01-02T03:04:05.000Z",
     });
   });
+
+  it("redacts synthetic passwords, tokens, cookies, and URL query values", () => {
+    const lines: string[] = [];
+    const logger = createStructuredLogger({
+      environment: "test",
+      minimumLevel: "debug",
+      service: "web",
+      sink: (line) => lines.push(line),
+    });
+    logger.error("redaction_test", {
+      authorization: "Bearer canary-token",
+      cookie: "session=canary-cookie",
+      nested: { password: "canary-password" },
+      target: "https://user:pass@example.invalid/path?token=canary-query#frag",
+    });
+    expect(lines[0]).not.toContain("canary");
+    expect(lines[0]).toContain("[REDACTED]");
+    expect(lines[0]).toContain("https://example.invalid/path");
+  });
 });

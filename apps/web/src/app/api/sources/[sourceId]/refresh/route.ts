@@ -62,6 +62,7 @@ export async function POST(
       services.sourcePollQueue,
       authentication.session.user.id,
       id.data,
+      authentication.requestId,
     );
     return apiJson(
       { job },

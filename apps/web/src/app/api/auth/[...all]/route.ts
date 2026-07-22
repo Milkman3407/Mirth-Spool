@@ -42,7 +42,10 @@ function responseWithCookies(
 
 async function consumeLoginLimits(request: Request, email: string) {
   const { authConfig, authenticationRateLimitStore } = getAuthServices();
-  const address = getClientAddress(request.headers, authConfig.trustProxy);
+  const address = getClientAddress(
+    request.headers,
+    authConfig.trustedProxyAddresses,
+  );
   const addressSubject = hashRateLimitSubject(
     authConfig.secret,
     "login-ip",
