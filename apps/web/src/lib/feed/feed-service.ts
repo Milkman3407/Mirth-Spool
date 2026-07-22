@@ -27,7 +27,10 @@ export async function readFeed(
   now = new Date(),
 ) {
   const query = parseFeedQuery(url);
-  const ceiling = await readSetting(services.database, "content.maximumRating");
+  const [ceiling, historyEnabled] = await Promise.all([
+    readSetting(services.database, "content.maximumRating"),
+    readSetting(services.database, "history.enabled"),
+  ]);
   const allowedRatings = ratingsFor(ceiling, query.rating);
   const cursor = query.cursor
     ? decodeFeedCursor(query.cursor, services.secret)
@@ -54,7 +57,7 @@ export async function readFeed(
   const base: FeedQuery = {
     allowedRatings: [...allowedRatings],
     ...(query.from ? { from: query.from } : {}),
-    includeSeen: query.includeSeen,
+    includeSeen: query.includeSeen || !historyEnabled,
     limit: query.limit,
     mediaKinds: query.kinds,
     mode: query.mode,
@@ -119,7 +122,9 @@ export async function readFeed(
       : null;
   return Object.freeze({
     hasMore: page.hasMore,
-    items: page.rows.map((row) => present(row, now, query.mode === "hot")),
+    items: page.rows.map((row) =>
+      presentFeedItem(row, now, query.mode === "hot", historyEnabled),
+    ),
     nextCursor,
     ...(seed ? { seed } : {}),
   });
@@ -130,16 +135,19 @@ export async function readContent(
   userId: string,
   contentId: string,
 ) {
-  const ceiling = await readSetting(services.database, "content.maximumRating");
+  const [ceiling, historyEnabled] = await Promise.all([
+    readSetting(services.database, "content.maximumRating"),
+    readSetting(services.database, "history.enabled"),
+  ]);
   const row = await getFeedContent(services.database, {
     allowedRatings: [...ratingsFor(ceiling)],
     contentId,
     userId,
   });
-  return row ? presentDetail(row) : null;
+  return row ? presentDetail(row, historyEnabled) : null;
 }
 
-function ratingsFor(
+export function ratingsFor(
   ceiling: string,
   requested?: string,
 ): readonly ContentRating[] {
@@ -158,10 +166,16 @@ function ratingsFor(
   ) as readonly ContentRating[];
 }
 
-function present(row: FeedRow, now: Date, hot: boolean) {
+export function presentFeedItem(
+  row: FeedRow,
+  now: Date,
+  hot: boolean,
+  historyEnabled: boolean,
+) {
   const primary = row.primarySourcePost;
   return {
     alternateSourceCount: Math.max(0, row.sourcePosts.length - 1),
+    actionState: presentActionState(row.actions, historyEnabled),
     authorName: row.authorName,
     contentRating: row.contentRating,
     contentWarning: row.contentWarning,
@@ -182,14 +196,10 @@ function present(row: FeedRow, now: Date, hot: boolean) {
   };
 }
 
-function presentDetail(row: ContentRow) {
+function presentDetail(row: ContentRow, historyEnabled: boolean) {
   return {
-    ...present(row, new Date(), false),
+    ...presentFeedItem(row, new Date(), false, historyEnabled),
     canonicalUrl: row.canonicalUrl,
-    actions: row.actions.map((action) => ({
-      kind: action.kind,
-      occurredAt: action.occurredAt.toISOString(),
-    })),
     media: row.mediaAssets.map(presentMedia),
     sources: row.sourcePosts.map((post) => ({
       externalId: post.externalId,
@@ -204,6 +214,29 @@ function presentDetail(row: ContentRow) {
       label: entry.tag.label,
       slug: entry.tag.slug,
     })),
+  };
+}
+
+function presentActionState(
+  actions: FeedRow["actions"],
+  historyEnabled: boolean,
+) {
+  const favorite = actions.find((action) => action.kind === "FAVORITE");
+  const hidden = actions.find((action) => action.kind === "HIDE");
+  const view = historyEnabled
+    ? actions.find((action) => action.kind === "VIEW")
+    : undefined;
+  return {
+    favorite: Boolean(favorite),
+    hidden: Boolean(hidden),
+    viewed: Boolean(view),
+    view: view
+      ? {
+          count: view.occurrenceCount,
+          firstViewedAt: view.occurredAt.toISOString(),
+          lastViewedAt: view.lastOccurredAt.toISOString(),
+        }
+      : null,
   };
 }
 

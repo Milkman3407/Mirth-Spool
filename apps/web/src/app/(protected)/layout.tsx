@@ -9,6 +9,9 @@ import { getAuthServices } from "../../lib/auth/server";
 
 const navigation = [
   { href: "/", label: "Feed" },
+  { href: "/library/favorites", label: "Favorites" },
+  { href: "/library/hidden", label: "Hidden" },
+  { href: "/library/history", label: "History" },
   { href: "/sources", label: "Sources" },
   { href: "/settings", label: "Settings" },
   { href: "/status", label: "Status" },
