@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import {
   mutateContentAction,
@@ -9,6 +9,7 @@ import {
 } from "../lib/actions/client";
 import type { FeedItem, FeedMedia } from "../lib/feed/client-schema";
 import { ContentActions } from "./content-actions";
+import { ShareOriginal } from "./share-original";
 
 type Props = Readonly<{
   detailHref?: string;
@@ -32,6 +33,8 @@ export function FeedCard({
   const guarded =
     item.contentRating !== "SAFE" || Boolean(item.contentWarning?.trim());
   const [revealed, setRevealed] = useState(!guarded);
+  const [warningAnnouncement, setWarningAnnouncement] = useState("");
+  const warningId = useId();
   const originalUrl = safeHttpUrl(item.primarySource?.providerUrl);
   const Heading = headingLevel === 1 ? "h1" : "h2";
   const article = useRef<HTMLElement | null>(null);
@@ -39,7 +42,12 @@ export function FeedCard({
   useMeaningfulView(article, item.id, viewPolicy);
 
   return (
-    <article className="feed-card" data-content-id={item.id} ref={article}>
+    <article
+      className="feed-card"
+      data-content-id={item.id}
+      id={`feed-item-${item.id}`}
+      ref={article}
+    >
       <header className="feed-card-header">
         <div>
           <p className="feed-source">
@@ -81,9 +89,13 @@ export function FeedCard({
                 "The source marked this content as restricted."}
             </span>
             <button
+              aria-describedby={warningId}
               aria-expanded="false"
               className="secondary-button"
-              onClick={() => setRevealed(true)}
+              onClick={() => {
+                setRevealed(true);
+                setWarningAnnouncement("Restricted media revealed.");
+              }}
               type="button"
             >
               Reveal this item
@@ -93,12 +105,18 @@ export function FeedCard({
           <button
             aria-expanded="true"
             className="warning-toggle"
-            onClick={() => setRevealed(false)}
+            onClick={() => {
+              setRevealed(false);
+              setWarningAnnouncement("Restricted media hidden.");
+            }}
             type="button"
           >
             Hide restricted media
           </button>
         ) : null}
+        <span aria-live="polite" className="visually-hidden" id={warningId}>
+          {warningAnnouncement}
+        </span>
       </div>
 
       {item.ranking ? (
@@ -140,15 +158,21 @@ export function FeedCard({
           ) : null}
         </div>
         {originalUrl ? (
-          <a
-            className="original-link"
-            href={originalUrl}
-            referrerPolicy="no-referrer"
-            rel="external noopener noreferrer"
-            target="_blank"
-          >
-            Open original <span aria-hidden="true">↗</span>
-          </a>
+          <div className="original-actions">
+            <ShareOriginal
+              title={item.title ?? "MirthSpool item"}
+              url={originalUrl}
+            />
+            <a
+              className="original-link"
+              href={originalUrl}
+              referrerPolicy="no-referrer"
+              rel="external noopener noreferrer"
+              target="_blank"
+            >
+              Open original <span aria-hidden="true">↗</span>
+            </a>
+          </div>
         ) : (
           <span className="muted-text">Original link unavailable</span>
         )}
@@ -242,7 +266,7 @@ export function MediaFrame({
         muted
         onError={() => setFailed(true)}
         playsInline
-        preload="metadata"
+        preload="none"
         src={renderUrl}
       />
     );

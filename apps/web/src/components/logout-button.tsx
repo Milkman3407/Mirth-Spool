@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { clearOriginCaches } from "./pwa-lifecycle";
+
 export function LogoutButton() {
   const [pending, setPending] = useState(false);
 
@@ -13,6 +15,7 @@ export function LogoutButton() {
         method: "POST",
       });
     } finally {
+      await clearOriginCaches().catch(() => undefined);
       window.location.assign("/login");
     }
   }

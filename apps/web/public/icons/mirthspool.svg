@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">MirthSpool</title>
+  <rect width="512" height="512" rx="112" fill="#0c1015"/>
+  <circle cx="256" cy="256" r="172" fill="#1d2631" stroke="#ffd166" stroke-width="24"/>
+  <path d="M154 322V190c0-25 30-36 47-18l55 61 55-61c17-18 47-7 47 18v132" fill="none" stroke="#f2f6fa" stroke-linecap="round" stroke-linejoin="round" stroke-width="42"/>
+  <circle cx="256" cy="256" r="24" fill="#ffd166"/>
+</svg>
