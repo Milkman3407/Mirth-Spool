@@ -3,9 +3,9 @@
 MirthSpool is a private, self-hosted content aggregator for administrator-selected meme-oriented sources. The project is being built milestone by milestone from the checked-in [Codex build pack](mirthspool-codex-plan/README.md).
 
 The repository includes the local runtime, PostgreSQL domain model, private
-authentication, and provider-independent source-management foundation through
-M04. No live provider connector, ingestion, real feed content, or content-upload
-functionality is present yet.
+authentication, official RSS ingestion, ranked browsing, and private user
+libraries through M09. Manual content-upload functionality is intentionally not
+present.
 
 ## Prerequisites
 
@@ -38,3 +38,5 @@ conventions, [authentication operations](docs/AUTHENTICATION.md), and the
 [connector security boundary](docs/CONNECTORS.md). The authenticated browsing
 behavior and remote-media privacy boundary are documented in the
 [web feed experience](docs/WEB_FEED_EXPERIENCE.md).
+Favorite, hide, view-history, Unseen, and private-library behavior are documented
+in [user actions and library operations](docs/USER_ACTIONS_AND_LIBRARY.md).

@@ -8,6 +8,12 @@ describe("feed client response schema", () => {
       hasMore: false,
       items: [
         {
+          actionState: {
+            favorite: false,
+            hidden: false,
+            viewed: false,
+            view: null,
+          },
           alternateSourceCount: 0,
           authorName: null,
           contentRating: "SAFE",

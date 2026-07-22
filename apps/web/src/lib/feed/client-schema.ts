@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { actionStateSchema } from "../actions/client";
+
 const httpUrlSchema = z
   .url()
   .max(2_048)
@@ -35,6 +37,7 @@ export const feedMediaSchema = z
   .passthrough();
 
 export const feedItemSchema = z.object({
+  actionState: actionStateSchema,
   alternateSourceCount: z.number().int().nonnegative(),
   authorName: z.string().nullable(),
   contentRating: z.enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"]),
