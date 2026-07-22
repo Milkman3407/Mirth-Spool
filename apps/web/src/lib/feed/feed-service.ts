@@ -166,7 +166,7 @@ function present(row: FeedRow, now: Date, hot: boolean) {
     contentRating: row.contentRating,
     contentWarning: row.contentWarning,
     id: row.id,
-    media: row.mediaAssets[0] ?? null,
+    media: row.mediaAssets[0] ? presentMedia(row.mediaAssets[0]) : null,
     publishedAt: row.publishedAt.toISOString(),
     summary: row.summary,
     title: row.title,
@@ -190,10 +190,7 @@ function presentDetail(row: ContentRow) {
       kind: action.kind,
       occurredAt: action.occurredAt.toISOString(),
     })),
-    media: row.mediaAssets.map((asset) => ({
-      ...asset,
-      byteLength: asset.byteLength?.toString() ?? null,
-    })),
+    media: row.mediaAssets.map(presentMedia),
     sources: row.sourcePosts.map((post) => ({
       externalId: post.externalId,
       firstSeenAt: post.firstSeenAt.toISOString(),
@@ -207,5 +204,30 @@ function presentDetail(row: ContentRow) {
       label: entry.tag.label,
       slug: entry.tag.slug,
     })),
+  };
+}
+
+function presentMedia<
+  T extends {
+    readonly byteLength: bigint | null;
+    readonly durationMilliseconds: number | null;
+    readonly height: number | null;
+    readonly id: string;
+    readonly kind: string;
+    readonly mimeType: string | null;
+    readonly remoteUrl: string;
+    readonly width: number | null;
+  },
+>(asset: T) {
+  return {
+    altText: null,
+    byteLength: asset.byteLength?.toString() ?? null,
+    durationMs: asset.durationMilliseconds,
+    height: asset.height,
+    id: asset.id,
+    kind: asset.kind,
+    mimeType: asset.mimeType,
+    remoteUrl: asset.remoteUrl,
+    width: asset.width,
   };
 }

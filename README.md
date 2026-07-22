@@ -35,4 +35,6 @@ After the active milestone is reviewed and merged, select the next incomplete mi
 See [Database and domain model](docs/DATABASE.md) for migration, rollback, and
 seed operations. See [CONTRIBUTING.md](CONTRIBUTING.md) for repository
 conventions, [authentication operations](docs/AUTHENTICATION.md), and the
-[connector security boundary](docs/CONNECTORS.md).
+[connector security boundary](docs/CONNECTORS.md). The authenticated browsing
+behavior and remote-media privacy boundary are documented in the
+[web feed experience](docs/WEB_FEED_EXPERIENCE.md).
