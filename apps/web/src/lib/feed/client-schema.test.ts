@@ -28,6 +28,8 @@ describe("feed client response schema", () => {
             kind: "IMAGE",
             mimeType: "image/png",
             remoteUrl: "https://media.example.test/image.png",
+            renderUrl: "https://media.example.test/image.png",
+            cacheState: "REMOTE_ONLY",
             width: 1,
           },
           primarySource: null,
@@ -47,7 +49,24 @@ describe("feed client response schema", () => {
             ...base.items[0],
             media: {
               ...base.items[0]!.media,
+              cacheState: "CACHED",
+              renderUrl: "/api/media/00000000-0000-4000-8000-000000000002",
+            },
+          },
+        ],
+      }).success,
+    ).toBe(true);
+    expect(
+      feedPageSchema.safeParse({
+        ...base,
+        items: [
+          {
+            ...base.items[0],
+            media: {
+              ...base.items[0]!.media,
               remoteUrl: "javascript:alert(1)",
+              renderUrl: "javascript:alert(1)",
+              cacheState: "REMOTE_ONLY",
             },
           },
         ],

@@ -5,7 +5,8 @@ MirthSpool is a private, self-hosted content aggregator for administrator-select
 The repository includes the local runtime, PostgreSQL domain model, private
 authentication, official RSS, Lemmy, Mastodon-compatible, and approved Reddit
 Data API ingestion,
-ranked browsing, and private user libraries through M11. Manual content-upload
+ranked browsing, private user libraries, and an optional bounded media cache
+through M13. Manual content-upload
 functionality is intentionally not present. Reddit sources require an
 operator-registered and approved OAuth client; see the
 [connector security boundary](docs/CONNECTORS.md) before enabling one.
@@ -43,3 +44,6 @@ behavior and remote-media privacy boundary are documented in the
 [web feed experience](docs/WEB_FEED_EXPERIENCE.md).
 Favorite, hide, view-history, Unseen, and private-library behavior are documented
 in [user actions and library operations](docs/USER_ACTIONS_AND_LIBRARY.md).
+The default remote-only mode, cache policies, quotas, private-network controls,
+delivery route, eviction, and purge operations are documented in
+[media cache operations](docs/MEDIA_CACHE.md).

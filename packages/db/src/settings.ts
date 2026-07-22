@@ -8,6 +8,26 @@ const settingDefinitions = {
     defaultValue: "NONE",
     schema: z.enum(["NONE", "FAVORITES_ONLY", "TTL", "ALL_WITHIN_QUOTA"]),
   },
+  "cache.allowedKinds": {
+    defaultValue: ["IMAGE", "ANIMATED_IMAGE", "VIDEO"],
+    schema: z
+      .array(z.enum(["IMAGE", "ANIMATED_IMAGE", "VIDEO"]))
+      .min(1)
+      .max(3)
+      .refine((value) => new Set(value).size === value.length),
+  },
+  "cache.maxObjectBytes": {
+    defaultValue: 50_000_000,
+    schema: z.number().int().min(1_000_000).max(500_000_000),
+  },
+  "cache.quotaBytes": {
+    defaultValue: 1_000_000_000,
+    schema: z.number().int().min(10_000_000).max(1_000_000_000_000),
+  },
+  "cache.ttlSeconds": {
+    defaultValue: 604_800,
+    schema: z.number().int().min(3_600).max(31_536_000),
+  },
   "content.maximumRating": {
     defaultValue: "SAFE",
     schema: z.enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"]),

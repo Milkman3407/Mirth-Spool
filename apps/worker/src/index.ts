@@ -19,6 +19,8 @@ import {
 } from "@mirthspool/db";
 import {
   bullConnectionFromUrl,
+  assertCacheMaintenanceJobData,
+  createMediaCacheQueue,
   createSourcePollQueue,
   QUEUE_NAMES,
   RedisHealthProbe,
@@ -26,6 +28,10 @@ import {
   type SourcePollJobData,
 } from "@mirthspool/redis";
 import { createStructuredLogger } from "@mirthspool/shared";
+import {
+  HardenedMediaClient,
+  LocalFilesystemStorage,
+} from "@mirthspool/storage";
 import { Queue, Worker } from "bullmq";
 
 import {
@@ -34,6 +40,12 @@ import {
   sourceBackoffStrategy,
 } from "./processor.js";
 import { scheduleDueSources } from "./scheduler.js";
+import {
+  createMediaCacheProcessor,
+  evictMediaCache,
+  purgeOrphanedObjects,
+  scheduleMediaCache,
+} from "./media-cache.js";
 
 const heartbeatPath = "/tmp/mirthspool-worker-heartbeat";
 const dayMilliseconds = 86_400_000;
@@ -73,7 +85,17 @@ async function main(): Promise<void> {
     completedSeconds: config.completedJobRetentionSeconds,
     failedSeconds: config.failedJobRetentionSeconds,
   });
+  const mediaQueue = createMediaCacheQueue(config.redisUrl, {
+    completedSeconds: config.completedJobRetentionSeconds,
+    failedSeconds: config.failedJobRetentionSeconds,
+  });
   const maintenanceQueue = new Queue(QUEUE_NAMES.maintenance, { connection });
+  const storage = new LocalFilesystemStorage(config.mediaStoragePath);
+  if (!(await storage.health())) {
+    logger.warn("worker.startup.storage_unavailable", {
+      code: "MEDIA_STORAGE_UNAVAILABLE",
+    });
+  }
   const shutdownController = new AbortController();
   const sourceWorker = new Worker<SourcePollJobData>(
     QUEUE_NAMES.sourcePolling,
@@ -116,14 +138,49 @@ async function main(): Promise<void> {
   );
   const maintenanceWorker = new Worker(
     QUEUE_NAMES.maintenance,
-    async () => {
+    async (job) => {
+      if (job.name === "cache-evict" || job.name === "cache-purge") {
+        const data = assertCacheMaintenanceJobData(job.data);
+        return evictMediaCache(database, storage, {
+          mode: data.action === "PURGE" ? "PURGE" : "POLICY",
+          now: new Date(),
+        });
+      }
       const olderThan = new Date(
         Date.now() - config.ingestionRunRetentionDays * dayMilliseconds,
       );
       const result = await cleanupIngestionRuns(database, olderThan);
-      return { deletedRuns: result.count };
+      const eviction = await evictMediaCache(database, storage, {
+        mode: "POLICY",
+        now: new Date(),
+      });
+      const orphanedObjects = await purgeOrphanedObjects(database, storage);
+      return {
+        deletedRuns: result.count,
+        ...eviction,
+        orphanedObjects,
+      };
     },
     { concurrency: 1, connection },
+  );
+  const mediaWorker = new Worker(
+    QUEUE_NAMES.mediaProcessing,
+    createMediaCacheProcessor({
+      database,
+      logger,
+      mediaClient: new HardenedMediaClient({
+        allowPrivateAddresses: security.allowPrivateMediaUrls,
+        allowedPorts: security.allowedMediaPorts,
+        limits: {
+          maxCompressedBytes: 500_000_000,
+          maxDecompressedBytes: 500_000_000,
+          totalTimeoutMs: 60_000,
+        },
+      }),
+      shutdownSignal: shutdownController.signal,
+      storage,
+    }),
+    { concurrency: config.mediaCacheConcurrency, connection },
   );
 
   sourceWorker.on("failed", (job, error) => {
@@ -138,6 +195,15 @@ async function main(): Promise<void> {
   maintenanceWorker.on("error", () =>
     logger.error("worker.maintenance.error", { code: "QUEUE_ERROR" }),
   );
+  mediaWorker.on("failed", (job, error) => {
+    logger.warn("worker.media_cache.job_failed", {
+      code: error.message.slice(0, 100),
+      jobId: job?.id,
+    });
+  });
+  mediaWorker.on("error", () =>
+    logger.error("worker.media_cache.error", { code: "QUEUE_ERROR" }),
+  );
 
   const heartbeat = async (): Promise<void> => {
     await writeFile(heartbeatPath, new Date().toISOString(), {
@@ -146,8 +212,17 @@ async function main(): Promise<void> {
     });
   };
   const schedule = async (): Promise<void> => {
-    const count = await scheduleDueSources(database, sourceQueue, new Date());
-    if (count > 0) logger.info("worker.scheduler.enqueued", { count });
+    const now = new Date();
+    const [sourceCount, mediaCount] = await Promise.all([
+      scheduleDueSources(database, sourceQueue, now),
+      scheduleMediaCache(database, mediaQueue, now),
+    ]);
+    if (sourceCount > 0 || mediaCount > 0) {
+      logger.info("worker.scheduler.enqueued", {
+        mediaCount,
+        sourceCount,
+      });
+    }
   };
   const enqueueMaintenance = async (): Promise<void> => {
     const day = new Date().toISOString().slice(0, 10);
@@ -166,7 +241,11 @@ async function main(): Promise<void> {
   };
 
   await Promise.all([heartbeat(), schedule(), enqueueMaintenance()]);
-  logger.info("worker.ready", { dependencies: 2, ingestionEnabled: true });
+  logger.info("worker.ready", {
+    cacheEnabled: true,
+    dependencies: 3,
+    ingestionEnabled: true,
+  });
   const heartbeatTimer = setInterval(
     () =>
       void heartbeat().catch(() =>
@@ -202,8 +281,16 @@ async function main(): Promise<void> {
     clearInterval(maintenanceTimer);
     logger.info("worker.shutdown.started", { signal });
     shutdownController.abort(signal);
-    await Promise.all([sourceWorker.close(), maintenanceWorker.close()]);
-    await Promise.all([sourceQueue.close(), maintenanceQueue.close()]);
+    await Promise.all([
+      sourceWorker.close(),
+      mediaWorker.close(),
+      maintenanceWorker.close(),
+    ]);
+    await Promise.all([
+      sourceQueue.close(),
+      mediaQueue.close(),
+      maintenanceQueue.close(),
+    ]);
     await database.$disconnect();
     await rm(heartbeatPath, { force: true });
     logger.info("worker.shutdown.complete", { signal });

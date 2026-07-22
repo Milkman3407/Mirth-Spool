@@ -250,6 +250,7 @@ function presentMedia<
   T extends {
     readonly altText: string | null;
     readonly byteLength: bigint | null;
+    readonly cacheState: string;
     readonly durationMilliseconds: number | null;
     readonly height: number | null;
     readonly id: string;
@@ -262,12 +263,17 @@ function presentMedia<
   return {
     altText: asset.altText,
     byteLength: asset.byteLength?.toString() ?? null,
+    cacheState: asset.cacheState,
     durationMs: asset.durationMilliseconds,
     height: asset.height,
     id: asset.id,
     kind: asset.kind,
     mimeType: asset.mimeType,
     remoteUrl: asset.remoteUrl,
+    renderUrl:
+      asset.cacheState === "CACHED"
+        ? `/api/media/${asset.id}`
+        : asset.remoteUrl,
     width: asset.width,
   };
 }
