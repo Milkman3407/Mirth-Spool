@@ -1,0 +1,8 @@
+{
+  "id": "acct-41",
+  "username": "artist",
+  "acct": "artist",
+  "display_name": "<img src=x onerror=alert(1)>Synthetic &amp; Artist",
+  "locked": false,
+  "url": "https://mastodon.example/@artist"
+}

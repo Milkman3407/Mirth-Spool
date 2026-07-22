@@ -294,9 +294,13 @@ model SourcePost {
   externalId           String
   providerUrl          String?
   providerAuthor       String?
+  boostedBy            String?
   communityName        String?
   providerScore        Int?
   providerCommentCount Int?
+  providerFavouriteCount Int?
+  providerShareCount   Int?
+  providerLanguage     String?
   providerPublishedAt  DateTime?    @db.Timestamptz(3)
   providerUpdatedAt    DateTime?    @db.Timestamptz(3)
   providerDeletedAt    DateTime?    @db.Timestamptz(3)
@@ -319,6 +323,7 @@ model MediaAsset {
   contentItemId       String      @db.Uuid
   ordinal             Int
   kind                MediaKind
+  altText             String?
   remoteUrl           String
   canonicalRemoteUrl  String?
   mimeType            String?
