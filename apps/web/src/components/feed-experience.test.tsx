@@ -21,6 +21,7 @@ const item = {
     view: null,
   },
   alternateSourceCount: 0,
+  duplicateGroup: null,
   authorName: null,
   contentRating: "SAFE" as const,
   contentWarning: null,

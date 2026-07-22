@@ -118,7 +118,7 @@ describe.sequential("ingestion scheduling and persistence", () => {
         },
         now,
       ),
-    ).toEqual({ created: 1, updated: 0 });
+    ).toMatchObject({ created: 1, updated: 0 });
     expect(
       await persistIngestionPage(
         database,
@@ -129,7 +129,7 @@ describe.sequential("ingestion scheduling and persistence", () => {
         },
         new Date(now.valueOf() + 1_000),
       ),
-    ).toEqual({ created: 0, updated: 1 });
+    ).toMatchObject({ created: 0, updated: 1 });
     expect(
       await database.sourcePost.count({ where: { sourceId: source.id } }),
     ).toBe(1);

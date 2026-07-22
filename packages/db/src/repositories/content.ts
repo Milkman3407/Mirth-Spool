@@ -16,6 +16,7 @@ import {
   prepareRawPayload,
   type RawPayloadPolicy,
 } from "../raw-payload.js";
+import { refreshContentSearchText, replaceProviderTags } from "../tags.js";
 
 const externalIdSchema = z.string().min(1).max(2_048);
 const text = z.string().max(20_000).nullable().optional();
@@ -62,6 +63,7 @@ export interface NormalizedContentInput {
   readonly canonicalUrl?: string | null;
   readonly canonicalUrlHash?: string | null;
   readonly rankingScore?: number;
+  readonly providerTags?: readonly string[];
   readonly media: readonly NormalizedMediaInput[];
 }
 
@@ -99,6 +101,12 @@ export async function upsertNormalizedContent(
             where: { id: existing.id },
             data: occurrenceUpdate(normalized, rawPayload, clock.now()),
           });
+          await replaceProviderTags(
+            transaction,
+            existing.contentItemId,
+            normalized.providerTags ?? [],
+          );
+          await refreshContentSearchText(transaction, existing.contentItemId);
           return transaction.contentItem.findUniqueOrThrow({
             where: { id: existing.contentItemId },
             include: {
@@ -160,10 +168,16 @@ export async function upsertNormalizedContent(
             data: { ...asset, contentItemId: contentItem.id },
           });
         }
+        await replaceProviderTags(
+          transaction,
+          contentItem.id,
+          normalized.providerTags ?? [],
+        );
         await transaction.contentItem.update({
           where: { id: contentItem.id },
           data: { primarySourcePostId: occurrence.id },
         });
+        await refreshContentSearchText(transaction, contentItem.id);
         return transaction.contentItem.findUniqueOrThrow({
           where: { id: contentItem.id },
           include: {
@@ -216,6 +230,9 @@ function validateInput(input: NormalizedContentInput): NormalizedContentInput {
     z.string().max(1_000).nullable().optional().parse(asset.altText);
     z.url().max(2_048).parse(asset.remoteUrl);
   }
+  z.array(z.string().trim().min(1).max(200))
+    .max(50)
+    .parse(input.providerTags ?? []);
   return input;
 }
 

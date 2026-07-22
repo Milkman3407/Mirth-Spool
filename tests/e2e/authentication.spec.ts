@@ -1,5 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
-import { createDatabaseClient, writeSetting } from "@mirthspool/db";
+import {
+  createDatabaseClient,
+  mergeDuplicateItems,
+  writeSetting,
+} from "@mirthspool/db";
 import { expect, test, type Page } from "@playwright/test";
 
 import { feedPageSchema } from "../../apps/web/src/lib/feed/client-schema";
@@ -188,9 +192,9 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.getByRole("link", { name: /Back to feed/ }).click();
 
     await page.getByText("Filter this feed").click();
-    await page.getByLabel("Tag").fill("fixture");
+    await page.getByLabel("Tag").fill("definitely-no-matches");
     await page.getByRole("button", { name: "Apply filters" }).click();
-    await expect(page).toHaveURL(/tag=fixture/);
+    await expect(page).toHaveURL(/tag=definitely-no-matches/);
     await expect(
       page.getByRole("heading", { name: "No items match this view" }),
     ).toBeVisible();
@@ -379,7 +383,68 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(
       page.getByRole("heading", { name: "View history is disabled" }),
     ).toBeVisible();
+    await exerciseSearchAndDuplicates(page);
   });
+
+  async function exerciseSearchAndDuplicates(page: Page) {
+    const database = createDatabaseClient({
+      connectionString: process.env.DATABASE_URL!,
+    });
+    let preservedOccurrences: number;
+    try {
+      const [administratorUser, items] = await Promise.all([
+        database.user.findFirstOrThrow({ where: { role: "ADMIN" } }),
+        database.contentItem.findMany({
+          orderBy: { title: "asc" },
+          take: 2,
+          where: { title: { startsWith: "Fixture post" } },
+        }),
+      ]);
+      expect(items).toHaveLength(2);
+      preservedOccurrences = await database.sourcePost.count({
+        where: { contentItemId: { in: items.map((item) => item.id) } },
+      });
+      await mergeDuplicateItems(database, {
+        actorUserId: administratorUser.id,
+        leftContentId: items[0]!.id,
+        reason: "MANUAL",
+        rightContentId: items[1]!.id,
+      });
+    } finally {
+      await database.$disconnect();
+    }
+
+    await page.goto("/search");
+    await page
+      .getByLabel("Search titles, authors, communities, sources, and tags")
+      .fill("Fixture post");
+    await page.getByLabel("Rating").selectOption("SAFE");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(page).toHaveURL(/\/search\?.*q=Fixture\+post.*rating=SAFE/);
+    await expect(
+      page.getByText(/Grouped duplicate.*2 preserved occurrences/),
+    ).toBeVisible();
+
+    await page.goto("/duplicates");
+    await expect(page.getByText("Administrator override")).toBeVisible();
+    await page.getByRole("button", { name: "Split from group" }).last().click();
+    await expect(page.getByRole("status")).toContainText(
+      "recorded in the audit log",
+    );
+
+    const verification = createDatabaseClient({
+      connectionString: process.env.DATABASE_URL!,
+    });
+    try {
+      expect(
+        await verification.sourcePost.count({
+          where: { contentItem: { title: { startsWith: "Fixture post" } } },
+        }),
+      ).toBeGreaterThanOrEqual(preservedOccurrences);
+    } finally {
+      await verification.$disconnect();
+    }
+  }
 
   test("adds public Lemmy, Mastodon, and Reddit sources with normalized attribution", async ({
     page,
@@ -657,6 +722,7 @@ test.describe.serial("private setup, sources, and feed", () => {
                 viewed: false,
               },
               alternateSourceCount: 0,
+              duplicateGroup: null,
               authorName: "fixture_author",
               contentRating: "SAFE",
               contentWarning: null,

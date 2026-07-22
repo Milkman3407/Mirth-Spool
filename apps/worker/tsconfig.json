@@ -10,6 +10,7 @@
   "references": [
     { "path": "../../packages/config" },
     { "path": "../../packages/connectors" },
+    { "path": "../../packages/deduplication" },
     { "path": "../../packages/db" },
     { "path": "../../packages/redis" },
     { "path": "../../packages/shared" },

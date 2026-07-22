@@ -18,6 +18,7 @@
     "paths": {
       "@mirthspool/config/*": ["./packages/config/dist/*"],
       "@mirthspool/connectors": ["./packages/connectors/dist/index.d.ts"],
+      "@mirthspool/deduplication": ["./packages/deduplication/dist/index.d.ts"],
       "@mirthspool/db": ["./packages/db/dist/index.d.ts"],
       "@mirthspool/redis": ["./packages/redis/dist/index.d.ts"],
       "@mirthspool/shared": ["./packages/shared/dist/index.d.ts"],

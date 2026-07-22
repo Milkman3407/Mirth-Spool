@@ -173,12 +173,25 @@ export function presentFeedItem(
   historyEnabled: boolean,
 ) {
   const primary = row.primarySourcePost;
+  const groupedItems = row.duplicateGroup?.items;
+  const occurrences = groupedItems
+    ? groupedItems.flatMap((item) => item.sourcePosts)
+    : row.sourcePosts;
+  const actions = groupedItems
+    ? groupedItems.flatMap((item) => item.actions)
+    : row.actions;
   return {
-    alternateSourceCount: Math.max(0, row.sourcePosts.length - 1),
-    actionState: presentActionState(row.actions, historyEnabled),
+    alternateSourceCount: Math.max(0, occurrences.length - 1),
+    actionState: presentActionState(actions, historyEnabled),
     authorName: row.authorName,
     contentRating: row.contentRating,
     contentWarning: row.contentWarning,
+    duplicateGroup: row.duplicateGroup
+      ? {
+          id: row.duplicateGroup.id,
+          itemCount: row.duplicateGroup.items.length,
+        }
+      : null,
     id: row.id,
     media: row.mediaAssets[0] ? presentMedia(row.mediaAssets[0]) : null,
     publishedAt: row.publishedAt.toISOString(),
@@ -197,11 +210,21 @@ export function presentFeedItem(
 }
 
 function presentDetail(row: ContentRow, historyEnabled: boolean) {
+  const groupedItems = row.duplicateGroup?.items;
+  const sourcePosts = groupedItems
+    ? groupedItems.flatMap((item) => item.sourcePosts)
+    : row.sourcePosts;
+  const tagEntries = groupedItems
+    ? groupedItems.flatMap((item) => item.tags)
+    : row.tags;
+  const tags = [
+    ...new Map(tagEntries.map((entry) => [entry.tag.slug, entry.tag])).values(),
+  ];
   return {
     ...presentFeedItem(row, new Date(), false, historyEnabled),
     canonicalUrl: row.canonicalUrl,
     media: row.mediaAssets.map(presentMedia),
-    sources: row.sourcePosts.map((post) => ({
+    sources: sourcePosts.map((post) => ({
       boostedBy: post.boostedBy,
       externalId: post.externalId,
       firstSeenAt: post.firstSeenAt.toISOString(),
@@ -216,9 +239,9 @@ function presentDetail(row: ContentRow, historyEnabled: boolean) {
       providerUrl: post.providerUrl,
       source: post.source,
     })),
-    tags: row.tags.map((entry) => ({
-      label: entry.tag.label,
-      slug: entry.tag.slug,
+    tags: tags.map((tag) => ({
+      label: tag.label,
+      slug: tag.slug,
     })),
   };
 }
