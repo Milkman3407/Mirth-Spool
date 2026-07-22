@@ -204,7 +204,9 @@ function presentDetail(row: ContentRow, historyEnabled: boolean) {
     sources: row.sourcePosts.map((post) => ({
       externalId: post.externalId,
       firstSeenAt: post.firstSeenAt.toISOString(),
+      communityName: post.communityName,
       providerAuthor: post.providerAuthor,
+      providerCommentCount: post.providerCommentCount,
       providerPublishedAt: post.providerPublishedAt?.toISOString() ?? null,
       providerScore: post.providerScore,
       providerUrl: post.providerUrl,

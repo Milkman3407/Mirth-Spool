@@ -115,11 +115,25 @@ export async function persistIngestionPage(
         });
         if (existing) {
           await transaction.sourcePost.update({
-            data: occurrenceData(item, now),
+            data: {
+              ...occurrenceData(item, now),
+              providerDeletedAt: item.providerDeletedAt
+                ? (existing.providerDeletedAt ?? item.providerDeletedAt)
+                : null,
+            },
             where: { id: existing.id },
           });
+          const activeOccurrences = await transaction.sourcePost.count({
+            where: {
+              contentItemId: existing.contentItemId,
+              providerDeletedAt: null,
+            },
+          });
           await transaction.contentItem.update({
-            data: contentData(item, now, source.priority),
+            data: {
+              ...contentData(item, now, source.priority),
+              status: activeOccurrences > 0 ? "ACTIVE" : "REMOVED_AT_SOURCE",
+            },
             where: { id: existing.contentItemId },
           });
           await transaction.mediaAsset.deleteMany({
@@ -287,9 +301,12 @@ function contentData(
 function occurrenceData(item: NormalizedContentInput, now: Date) {
   return {
     externalId: item.externalId,
+    communityName: item.communityName ?? null,
     lastSeenAt: now,
     providerAuthor: item.providerAuthor ?? null,
     providerPublishedAt: item.providerPublishedAt ?? null,
+    providerDeletedAt: item.providerDeletedAt ?? null,
+    providerCommentCount: item.providerCommentCount ?? null,
     providerScore: item.providerScore ?? null,
     providerUpdatedAt: item.providerUpdatedAt ?? null,
     providerUrl: item.providerUrl ?? null,

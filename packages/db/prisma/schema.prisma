@@ -294,9 +294,12 @@ model SourcePost {
   externalId           String
   providerUrl          String?
   providerAuthor       String?
+  communityName        String?
   providerScore        Int?
+  providerCommentCount Int?
   providerPublishedAt  DateTime?    @db.Timestamptz(3)
   providerUpdatedAt    DateTime?    @db.Timestamptz(3)
+  providerDeletedAt    DateTime?    @db.Timestamptz(3)
   rawPayload           Json?
   rawPayloadBytes      Int?
   firstSeenAt          DateTime     @default(now()) @db.Timestamptz(3)
@@ -307,6 +310,7 @@ model SourcePost {
 
   @@unique([sourceId, externalId])
   @@index([sourceId, providerPublishedAt(sort: Desc)])
+  @@index([sourceId, providerDeletedAt])
   @@index([contentItemId])
 }
 
