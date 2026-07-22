@@ -13,6 +13,8 @@ export {
   type RawPayloadPolicy,
 } from "./raw-payload.js";
 export type { Clock, RepositoryClient } from "./repository-types.js";
+export * from "./feed-ranking.js";
+export * from "./repositories/feed.js";
 export {
   getSettingDefault,
   knownSettingKeys,

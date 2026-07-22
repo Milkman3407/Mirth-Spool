@@ -14,6 +14,10 @@
     "./ingestion": {
       "types": "./dist/repositories/ingestion.d.ts",
       "default": "./dist/repositories/ingestion.js"
+    },
+    "./feed": {
+      "types": "./dist/repositories/feed.d.ts",
+      "default": "./dist/repositories/feed.js"
     }
   },
   "scripts": {
