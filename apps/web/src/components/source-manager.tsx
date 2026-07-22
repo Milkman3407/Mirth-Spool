@@ -158,6 +158,38 @@ export function SourceManager() {
     });
   }
 
+  function createMastodonSource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const language = String(form.get("mastodonLanguage") ?? "").trim() || null;
+    void run(async () => {
+      await api(
+        "/api/sources",
+        jsonMutation("POST", {
+          config: {
+            identifier: form.get("mastodonIdentifier"),
+            includeReblogs: form.get("mastodonIncludeReblogs") === "on",
+            instanceUrl: form.get("mastodonInstanceUrl"),
+            itemsPerPage: Number(form.get("mastodonItemsPerPage")),
+            language,
+            minimumMedia: Number(form.get("mastodonMinimumMedia")),
+            mode: form.get("mastodonMode"),
+            pageLimit: Number(form.get("mastodonPageLimit")),
+          },
+          defaultContentRating: form.get("mastodonDefaultContentRating"),
+          displayName: form.get("mastodonDisplayName"),
+          enabled: form.get("mastodonEnabled") === "on",
+          kind: "MASTODON",
+          pollIntervalSeconds: Number(form.get("mastodonPollIntervalSeconds")),
+          priority: Number(form.get("mastodonPriority")),
+        }),
+      );
+      formElement.reset();
+      setNotice("Mastodon-compatible source created.");
+    });
+  }
+
   return (
     <div className="source-manager">
       <section className="panel">
@@ -352,6 +384,125 @@ export function SourceManager() {
         </form>
       </section>
 
+      <section className="panel">
+        <h2>Add Mastodon media timeline</h2>
+        <p className="form-hint">
+          Uses public Mastodon-compatible JSON APIs only. Status markup is
+          reduced to plain text and linked destinations are never fetched.
+        </p>
+        <form className="source-form" onSubmit={createMastodonSource}>
+          <label>
+            Mastodon display name
+            <input maxLength={200} name="mastodonDisplayName" required />
+          </label>
+          <label>
+            Mastodon instance URL
+            <input
+              maxLength={2048}
+              name="mastodonInstanceUrl"
+              placeholder="https://mastodon.example"
+              required
+              type="url"
+            />
+          </label>
+          <label>
+            Timeline mode
+            <select defaultValue="HASHTAG" name="mastodonMode">
+              <option value="HASHTAG">Public hashtag</option>
+              <option value="ACCOUNT">Public account</option>
+            </select>
+          </label>
+          <label>
+            Hashtag or account handle
+            <input
+              maxLength={255}
+              name="mastodonIdentifier"
+              placeholder="memes or artist@example.social"
+              required
+            />
+          </label>
+          <label>
+            Language filter (optional BCP 47 code)
+            <input maxLength={35} name="mastodonLanguage" placeholder="en" />
+          </label>
+          <label>
+            Minimum supported media attachments
+            <input
+              defaultValue="1"
+              max="4"
+              min="1"
+              name="mastodonMinimumMedia"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Mastodon statuses per page
+            <input
+              defaultValue="20"
+              max="40"
+              min="1"
+              name="mastodonItemsPerPage"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Mastodon pages per run
+            <input
+              defaultValue="3"
+              max="10"
+              min="1"
+              name="mastodonPageLimit"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Mastodon poll interval (seconds)
+            <input
+              defaultValue="900"
+              max="86400"
+              min="60"
+              name="mastodonPollIntervalSeconds"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Mastodon priority
+            <input
+              defaultValue="0"
+              max="100"
+              min="-100"
+              name="mastodonPriority"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Mastodon rating fallback
+            <select defaultValue="UNKNOWN" name="mastodonDefaultContentRating">
+              <option value="UNKNOWN">Unknown (review required)</option>
+              <option value="SAFE">Safe</option>
+              <option value="SENSITIVE">Sensitive</option>
+              <option value="ADULT">Adult</option>
+            </select>
+          </label>
+          <label>
+            <input name="mastodonIncludeReblogs" type="checkbox" /> Include
+            boosts, deduplicated under the original status
+          </label>
+          <label>
+            <input name="mastodonEnabled" type="checkbox" /> Enable Mastodon
+            source
+          </label>
+          <button disabled={pending} type="submit">
+            Add Mastodon source
+          </button>
+        </form>
+      </section>
+
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -468,6 +619,21 @@ function SourceEditor({
                   sort: form.get("lemmySort"),
                 },
                 minimumScore: Number(form.get("lemmyMinimumScore")),
+              }
+            : {}),
+          ...(source.kind === "MASTODON"
+            ? {
+                config: {
+                  identifier: form.get("mastodonIdentifier"),
+                  includeReblogs: form.get("mastodonIncludeReblogs") === "on",
+                  instanceUrl: form.get("mastodonInstanceUrl"),
+                  itemsPerPage: Number(form.get("mastodonItemsPerPage")),
+                  language:
+                    String(form.get("mastodonLanguage") ?? "").trim() || null,
+                  minimumMedia: Number(form.get("mastodonMinimumMedia")),
+                  mode: form.get("mastodonMode"),
+                  pageLimit: Number(form.get("mastodonPageLimit")),
+                },
               }
             : {}),
           defaultContentRating: form.get("defaultContentRating"),
@@ -654,6 +820,88 @@ function SourceEditor({
             </label>
           </>
         ) : null}
+        {source.kind === "MASTODON" ? (
+          <>
+            <label>
+              Mastodon instance URL
+              <input
+                defaultValue={String(source.configJson.instanceUrl ?? "")}
+                maxLength={2048}
+                name="mastodonInstanceUrl"
+                required
+                type="url"
+              />
+            </label>
+            <label>
+              Timeline mode
+              <select
+                defaultValue={String(source.configJson.mode ?? "HASHTAG")}
+                name="mastodonMode"
+              >
+                <option value="HASHTAG">Public hashtag</option>
+                <option value="ACCOUNT">Public account</option>
+              </select>
+            </label>
+            <label>
+              Hashtag or account handle
+              <input
+                defaultValue={String(source.configJson.identifier ?? "")}
+                maxLength={255}
+                name="mastodonIdentifier"
+                required
+              />
+            </label>
+            <label>
+              Language filter
+              <input
+                defaultValue={String(source.configJson.language ?? "")}
+                maxLength={35}
+                name="mastodonLanguage"
+              />
+            </label>
+            <label>
+              Minimum supported media attachments
+              <input
+                defaultValue={Number(source.configJson.minimumMedia ?? 1)}
+                max="4"
+                min="1"
+                name="mastodonMinimumMedia"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              Mastodon statuses per page
+              <input
+                defaultValue={Number(source.configJson.itemsPerPage ?? 20)}
+                max="40"
+                min="1"
+                name="mastodonItemsPerPage"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              Mastodon pages per run
+              <input
+                defaultValue={Number(source.configJson.pageLimit ?? 3)}
+                max="10"
+                min="1"
+                name="mastodonPageLimit"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              <input
+                defaultChecked={source.configJson.includeReblogs === true}
+                name="mastodonIncludeReblogs"
+                type="checkbox"
+              />{" "}
+              Include boosts, deduplicated under the original status
+            </label>
+          </>
+        ) : null}
         <label>
           Display name
           <input
@@ -755,7 +1003,9 @@ function SourceEditor({
                   ? `${body.result.message} ${details.sampleItemCount ?? "0"} sample entries parsed (${details.feedFormat ?? "feed"}).`
                   : details?.communityName
                     ? `${body.result.message} Resolved ${details.communityTitle ?? details.communityName} via ${details.apiCompatibility ?? "Lemmy API"}.`
-                    : body.result.message,
+                    : details?.resolvedTarget
+                      ? `${body.result.message} ${details.instanceTitle ?? details.instanceHost} reports ${details.instanceVersion ?? "an unknown version"} (${details.apiCompatibility ?? "Mastodon API"}).`
+                      : body.result.message,
               );
             })
           }

@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { createDatabaseClient, writeSetting } from "@mirthspool/db";
 import { expect, test, type Page } from "@playwright/test";
 
 import { feedPageSchema } from "../../apps/web/src/lib/feed/client-schema";
@@ -348,10 +349,10 @@ test.describe.serial("private setup, sources, and feed", () => {
     ).toBeVisible();
   });
 
-  test("adds a public Lemmy source and displays normalized attribution", async ({
+  test("adds public Lemmy and Mastodon sources with normalized attribution", async ({
     page,
   }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(120_000);
     await signIn(page);
     await page.goto("/sources");
     await page.getByLabel("Lemmy display name").fill("Fixture Lemmy community");
@@ -393,6 +394,61 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(
       page.getByRole("link", { name: /Open original/ }).first(),
     ).toHaveAttribute("href", "https://lemmy.example/post/1001");
+
+    await page.goto("/sources");
+    await page
+      .getByLabel("Mastodon display name")
+      .fill("Fixture Mastodon hashtag");
+    await page
+      .getByLabel("Mastodon instance URL")
+      .first()
+      .fill("http://fixture-feed:8080");
+    await page.getByLabel("Hashtag or account handle").first().fill("Memes");
+    await page.getByLabel("Enable Mastodon source").check();
+    await page.getByRole("button", { name: "Add Mastodon source" }).click();
+
+    {
+      const source = page
+        .locator("article.source-card")
+        .filter({ hasText: "Fixture Mastodon hashtag" });
+      await expect(source).toContainText("MASTODON · ACTIVE");
+      await source.getByRole("button", { name: "Validate" }).click();
+      await expect(page.getByRole("status")).toContainText(
+        "Connected to #Memes on fixture-feed",
+      );
+      await source.getByRole("button", { name: "Refresh now" }).click();
+      await source.getByText(/Recent ingestion runs/).click();
+      await expect(source.locator(".run-row").first()).toContainText(
+        "SUCCEEDED",
+        { timeout: 20_000 },
+      );
+
+      const database = createDatabaseClient({
+        connectionString: process.env.DATABASE_URL!,
+      });
+      try {
+        await writeSetting(database, "content.maximumRating", "SENSITIVE");
+      } finally {
+        await database.$disconnect();
+      }
+      await page.goto("/?rating=sensitive");
+      const card = page
+        .locator("article.feed-card")
+        .filter({ hasText: "Hello world" });
+      await expect(card).toBeVisible();
+      await expect(
+        card.getByRole("group", { name: "Content warning" }),
+      ).toContainText("Flashing & synthetic");
+      await card.getByRole("button", { name: "Reveal this item" }).click();
+      await expect(
+        card.getByRole("button", { name: "Hide restricted media" }),
+      ).toBeVisible();
+      await card.getByRole("link", { name: "View details" }).click();
+      await expect(page.getByText("mastodon@fixture-feed")).toBeVisible();
+      await expect(page.getByText(/@artist@fixture-feed/).last()).toBeVisible();
+      const renderedMain = await page.locator("main").innerHTML();
+      expect(renderedMain).not.toMatch(/onerror|alert\(1\)|<script/iu);
+    }
   });
 });
 

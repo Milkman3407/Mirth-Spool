@@ -24,6 +24,7 @@ const url = z.url().max(2_048).nullable().optional();
 export interface NormalizedMediaInput {
   readonly ordinal: number;
   readonly kind: MediaKind;
+  readonly altText?: string | null;
   readonly remoteUrl: string;
   readonly canonicalRemoteUrl?: string | null;
   readonly mimeType?: string | null;
@@ -38,9 +39,13 @@ export interface NormalizedContentInput {
   readonly externalId: string;
   readonly providerUrl?: string | null;
   readonly providerAuthor?: string | null;
+  readonly boostedBy?: string | null;
   readonly communityName?: string | null;
   readonly providerScore?: number | null;
   readonly providerCommentCount?: number | null;
+  readonly providerFavouriteCount?: number | null;
+  readonly providerShareCount?: number | null;
+  readonly providerLanguage?: string | null;
   readonly providerPublishedAt?: Date | null;
   readonly providerUpdatedAt?: Date | null;
   readonly providerDeletedAt?: Date | null;
@@ -208,6 +213,7 @@ function validateInput(input: NormalizedContentInput): NormalizedContentInput {
   }
   for (const asset of input.media) {
     z.number().int().min(0).max(100).parse(asset.ordinal);
+    z.string().max(1_000).nullable().optional().parse(asset.altText);
     z.url().max(2_048).parse(asset.remoteUrl);
   }
   return input;
@@ -227,6 +233,7 @@ function occurrenceCreate(
     ...(input.providerAuthor !== undefined
       ? { providerAuthor: input.providerAuthor }
       : {}),
+    ...(input.boostedBy !== undefined ? { boostedBy: input.boostedBy } : {}),
     ...(input.communityName !== undefined
       ? { communityName: input.communityName }
       : {}),
@@ -235,6 +242,15 @@ function occurrenceCreate(
       : {}),
     ...(input.providerCommentCount !== undefined
       ? { providerCommentCount: input.providerCommentCount }
+      : {}),
+    ...(input.providerFavouriteCount !== undefined
+      ? { providerFavouriteCount: input.providerFavouriteCount }
+      : {}),
+    ...(input.providerShareCount !== undefined
+      ? { providerShareCount: input.providerShareCount }
+      : {}),
+    ...(input.providerLanguage !== undefined
+      ? { providerLanguage: input.providerLanguage }
       : {}),
     ...(input.providerPublishedAt !== undefined
       ? { providerPublishedAt: input.providerPublishedAt }
@@ -265,6 +281,7 @@ function occurrenceUpdate(
     ...(input.providerAuthor !== undefined
       ? { providerAuthor: input.providerAuthor }
       : {}),
+    ...(input.boostedBy !== undefined ? { boostedBy: input.boostedBy } : {}),
     ...(input.communityName !== undefined
       ? { communityName: input.communityName }
       : {}),
@@ -273,6 +290,15 @@ function occurrenceUpdate(
       : {}),
     ...(input.providerCommentCount !== undefined
       ? { providerCommentCount: input.providerCommentCount }
+      : {}),
+    ...(input.providerFavouriteCount !== undefined
+      ? { providerFavouriteCount: input.providerFavouriteCount }
+      : {}),
+    ...(input.providerShareCount !== undefined
+      ? { providerShareCount: input.providerShareCount }
+      : {}),
+    ...(input.providerLanguage !== undefined
+      ? { providerLanguage: input.providerLanguage }
       : {}),
     ...(input.providerPublishedAt !== undefined
       ? { providerPublishedAt: input.providerPublishedAt }

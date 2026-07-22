@@ -58,6 +58,12 @@ export default async function ContentDetailPage({
                     ? ` · ${formatDate(occurrence.providerPublishedAt)}`
                     : ""}
                 </span>
+                {occurrence.boostedBy ? (
+                  <span>Boosted by {occurrence.boostedBy}</span>
+                ) : null}
+                {occurrence.providerLanguage ? (
+                  <span>Language: {occurrence.providerLanguage}</span>
+                ) : null}
               </div>
               {occurrence.providerUrl ? (
                 <a

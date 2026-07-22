@@ -107,6 +107,78 @@ References: [official Lemmy API documentation](https://join-lemmy.org/docs/contr
 and the [official API v4 upgrade guide](https://join-lemmy.org/docs/contributors/09-api-v4.html).
 No unsupported HTML scraping is used.
 
+## Mastodon-compatible connector review
+
+- Official API: public `GET /api/v2/instance`, `GET /api/v1/tags/:name`,
+  `GET /api/v1/timelines/tag/:name`, `GET /api/v1/accounts/lookup`, and
+  `GET /api/v1/accounts/:id/statuses` endpoints from the Mastodon client API.
+  The implementation was reviewed against the official documentation current on
+  2026-07-22. It targets the Mastodon 4.x public API surface and records both the
+  human-readable server version and machine-readable `api_versions.mastodon`
+  value when supplied. Compatible forks must return the validated shapes; there
+  is no permissive HTML fallback.
+- Authentication and visibility: none. Only unauthenticated public hashtag and
+  public-account timelines are supported. Every returned status and any boosted
+  original must declare `visibility: public`; unlisted, private, and direct
+  statuses are discarded even if a server returns them unexpectedly. Instances
+  that disable public preview produce a stable restricted-source health error.
+- Configuration: one HTTP(S) instance origin, `HASHTAG` or `ACCOUNT` mode, a
+  validated hashtag/account identifier, optional BCP 47 language filter,
+  include-boosts policy, 1–4 minimum supported attachments, 1–40 statuses per
+  page, and 1–10 pages per run. Global request, byte, item, page, retry, and
+  duration ceilings remain authoritative.
+- Connectivity: performs at most three bounded calls: instance diagnostics,
+  tag/account resolution, and a media-only timeline sample. Preview output is
+  limited to the resolved target, instance host/title/version, source mode, and
+  API compatibility number.
+- Pagination: provider status IDs and `Link` values remain opaque strings.
+  `since_id` is retained after a completed run; multi-page runs retain the newest
+  outer status ID, next URL, account ID, page number, and at most 100 emitted
+  original IDs. A next link is accepted only when it has the configured origin,
+  exact timeline pathname, no credentials or fragment, and an allowlisted set of
+  pagination parameters. Cross-origin and cross-endpoint links fail closed.
+- Boosts: disabled by default. When enabled, the original status ID, author,
+  URL, warning, counters, and media define the occurrence. The booster is stored
+  separately as attribution. Multiple boosts of one original therefore converge
+  on `(sourceId, originalStatusId)` instead of producing feed spam.
+- Attribution: author display names are reduced to plain text and paired with a
+  full instance-aware handle. The configured instance, optional booster,
+  language, reply/favourite/boost counters, status URL, and publication/edit
+  times are preserved.
+- Media: the provider's image, GIFV, and video attachment URLs and preview
+  metadata are normalized without fetching their destinations. GIFV is treated
+  as video. Unsupported and audio-first attachments are ignored; a status must
+  still meet the configured supported-media minimum. Alt text is bounded and
+  reduced to inert plain text.
+- Markup and rating: status content, spoiler text, display names, and attachment
+  descriptions are stripped of active blocks/tags, entity-decoded, control-
+  filtered, whitespace-normalized, and length-bounded before persistence. Raw
+  provider HTML is neither stored nor rendered. A sensitive flag or non-empty
+  spoiler maps to `SENSITIVE` and preserves the warning; otherwise an explicitly
+  public, non-sensitive status maps to `SAFE`.
+- Editing and removal: `edited_at` is retained. A compatible provider's bounded
+  `deleted_at` extension marks the occurrence removed and drops body/media.
+  Standard Mastodon timelines normally omit deleted statuses, so absence alone
+  is not interpreted as deletion and does not trigger repeated lookup traffic.
+- Errors and rate behavior: public-preview restrictions, missing/suspended
+  accounts or tags, invalid identifiers, rate limiting with `Retry-After`,
+  transient upstream errors, malformed JSON/shapes, and rejected pagination map
+  to stable sanitized connector errors and the existing source-health/backoff
+  system. Provider response bodies are never exposed.
+- Fixtures: `tests/fixtures/mastodon` is synthetic and covers hashtag/account
+  modes, local and remote-style handles, multiple images, GIFV/video, unsupported
+  audio, alt text, spoilers, sensitivity, edits/removal, boosts, mutable
+  pagination, rate limiting, malformed data, and XSS-shaped fields. Unit tests
+  mock the hardened boundary; integration and browser tests use a local fixture
+  instance. CI has no live Mastodon dependency.
+
+References: [official timeline methods](https://docs.joinmastodon.org/methods/timelines/),
+[official account methods](https://docs.joinmastodon.org/methods/accounts/),
+[official instance methods](https://docs.joinmastodon.org/methods/instance/),
+[Status entity](https://docs.joinmastodon.org/entities/Status/), and
+[MediaAttachment entity](https://docs.joinmastodon.org/entities/MediaAttachment/).
+No unsupported HTML scraping is used.
+
 ## Outbound request policy
 
 The hardened client permits only HTTP and HTTPS, rejects URL credentials, and
