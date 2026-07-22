@@ -1,0 +1,39 @@
+# MirthSpool
+
+MirthSpool is a private, self-hosted content aggregator for administrator-selected meme-oriented sources. The project is being built milestone by milestone from the checked-in [Codex build pack](mirthspool-codex-plan/README.md).
+
+The repository includes the local runtime, PostgreSQL domain model, private
+authentication, and provider-independent source-management foundation through
+M04. No live provider connector, ingestion, real feed content, or content-upload
+functionality is present yet.
+
+## Prerequisites
+
+- Node.js 24
+- pnpm 11.9.0, activated through Corepack from the `packageManager` pin
+- Docker Engine with Docker Compose v2
+
+## Setup and quality checks
+
+Create a local `.env` and replace the database-password placeholder before starting the runtime. Full commands, reset warnings, log usage, and reverse-proxy expectations are in [Local runtime operations](docs/LOCAL_RUNTIME.md).
+
+```bash
+pnpm install --frozen-lockfile
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+docker compose config
+pnpm test:integration
+```
+
+## Selecting and executing the next milestone
+
+After the active milestone is reviewed and merged, select the next incomplete milestone from the [milestone index](mirthspool-codex-plan/MILESTONES.md). Read `AGENTS.md`, the selected milestone, and every governing document it references before editing. Use one branch and one pull request for that milestone, run all applicable gates, provide the required completion report, and stop without beginning a later milestone.
+
+See [Database and domain model](docs/DATABASE.md) for migration, rollback, and
+seed operations. See [CONTRIBUTING.md](CONTRIBUTING.md) for repository
+conventions, [authentication operations](docs/AUTHENTICATION.md), and the
+[connector security boundary](docs/CONNECTORS.md).
+
