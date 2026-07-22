@@ -21,6 +21,11 @@ describe("server configuration", () => {
       client: { publicOrigin: "https://mirthspool.invalid" },
       completedJobRetentionSeconds: 3_600,
       databaseUrl: "postgresql://user:password@postgres:5432/mirthspool",
+      duplicateAnalysisConcurrency: 1,
+      duplicateHashMaxBytes: 20_000_000,
+      duplicateHashMaxPixels: 16_777_216,
+      duplicateHashTimeoutMs: 5_000,
+      duplicateMaxCandidates: 100,
       failedJobRetentionSeconds: 604_800,
       healthCheckTimeoutMs: 1_000,
       ingestionMaxDurationMs: 60_000,
@@ -72,6 +77,19 @@ describe("server configuration", () => {
         REDIS_URL: "http://not-redis.invalid",
       }),
     ).not.toThrow(unsafeValue);
+  });
+
+  it("rejects unbounded duplicate-analysis settings", () => {
+    expect(() =>
+      parseServerConfig({
+        DATABASE_URL: "postgresql://user:password@postgres:5432/mirthspool",
+        MIRTHSPOOL_DUPLICATE_ANALYSIS_CONCURRENCY: 100,
+        MIRTHSPOOL_DUPLICATE_HASH_MAX_BYTES: 500_000_000,
+        MIRTHSPOOL_DUPLICATE_MAX_CANDIDATES: 10_000,
+        MIRTHSPOOL_PUBLIC_ORIGIN: "https://mirthspool.invalid",
+        REDIS_URL: "redis://redis:6379",
+      }),
+    ).toThrow(ConfigurationError);
   });
 });
 

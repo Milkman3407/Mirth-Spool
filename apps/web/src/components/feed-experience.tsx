@@ -14,9 +14,11 @@ import {
 import { FeedCard } from "./feed-card";
 
 export function FeedExperience({
+  apiPath = "/api/feed",
   apiQuery,
   initialPage,
 }: Readonly<{
+  apiPath?: "/api/feed" | "/api/search";
   apiQuery: string;
   initialPage: FeedPage;
 }>) {
@@ -45,7 +47,7 @@ export function FeedExperience({
       const query = new URLSearchParams(apiQuery);
       query.set("cursor", cursor);
       if (initialPage.seed) query.set("seed", initialPage.seed);
-      const response = await fetch(`/api/feed?${query.toString()}`, {
+      const response = await fetch(`${apiPath}?${query.toString()}`, {
         cache: "no-store",
         credentials: "same-origin",
         signal: controller.signal,
@@ -68,7 +70,7 @@ export function FeedExperience({
     } finally {
       if (inFlight.current === controller) inFlight.current = null;
     }
-  }, [apiQuery, cursor, hasMore, initialPage.seed]);
+  }, [apiPath, apiQuery, cursor, hasMore, initialPage.seed]);
 
   useEffect(() => {
     const element = sentinel.current;

@@ -41,6 +41,7 @@ const item: FeedItem = {
     view: null,
   },
   alternateSourceCount: 1,
+  duplicateGroup: null,
   authorName: "Fixture author",
   contentRating: "ADULT",
   contentWarning: "Synthetic adult marker",

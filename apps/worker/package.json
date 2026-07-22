@@ -14,6 +14,7 @@
   "dependencies": {
     "@mirthspool/config": "workspace:*",
     "@mirthspool/connectors": "workspace:*",
+    "@mirthspool/deduplication": "workspace:*",
     "@mirthspool/db": "workspace:*",
     "@mirthspool/redis": "workspace:*",
     "@mirthspool/shared": "workspace:*",
