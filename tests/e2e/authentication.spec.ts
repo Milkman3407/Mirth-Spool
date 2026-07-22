@@ -238,6 +238,115 @@ test.describe.serial("private setup, sources, and feed", () => {
     expect(bounds?.width).toBeLessThanOrEqual(390);
     expect(await page.locator('input[type="file"]').count()).toBe(0);
   });
+
+  test("persists favorites, hidden items, history, and optimistic failures", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await signIn(page);
+    let target = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" });
+    await expect(target).toBeVisible();
+
+    await target.getByRole("button", { name: "Add to favorites" }).click();
+    await expect(
+      target.getByRole("button", { name: "Remove from favorites" }),
+    ).toBeVisible();
+    await page.reload();
+    target = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" });
+    await expect(
+      target.getByRole("button", { name: "Remove from favorites" }),
+    ).toBeVisible();
+
+    await page.goto("/library/favorites");
+    await expect(
+      page.getByRole("heading", { name: "Favorites" }),
+    ).toBeVisible();
+    await expect(page.getByText("Deterministic fixture image")).toBeVisible();
+    await page.reload();
+    await page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" })
+      .getByRole("button", { name: "Remove from favorites" })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Nothing here yet" }),
+    ).toBeVisible();
+
+    await page.goto("/");
+    target = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" });
+    await page.route("**/api/content/*/favorite", async (route) => {
+      if (route.request().method() === "PUT") {
+        await route.fulfill({
+          body: JSON.stringify({ error: { code: "SYNTHETIC_FAILURE" } }),
+          contentType: "application/json",
+          status: 503,
+        });
+      } else {
+        await route.continue();
+      }
+    });
+    await target.getByRole("button", { name: "Add to favorites" }).click();
+    await expect(target.getByRole("alert")).toContainText("restored");
+    await expect(
+      target.getByRole("button", { name: "Add to favorites" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    await page.unroute("**/api/content/*/favorite");
+
+    await target.getByRole("button", { name: "Hide item" }).click();
+    await expect(page.getByRole("status")).toContainText("Item hidden");
+    await page.getByRole("button", { name: "Undo hide" }).click();
+    target = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" });
+    await expect(target).toBeVisible();
+    await target.getByRole("button", { name: "Hide item" }).click();
+    await expect(target).toHaveCount(0);
+
+    await page.goto("/library/hidden");
+    await expect(
+      page.getByRole("heading", { name: "Hidden items" }),
+    ).toBeVisible();
+    await expect(page.getByText("Deterministic fixture image")).toBeVisible();
+    await page.reload();
+    await page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" })
+      .getByRole("button", { name: "Unhide item" })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Nothing here yet" }),
+    ).toBeVisible();
+    await page.goto("/");
+    target = page
+      .locator("article.feed-card")
+      .filter({ hasText: "Deterministic fixture image" });
+    await expect(target).toBeVisible();
+
+    await target.getByRole("link", { name: "View details" }).click();
+    await expect(page).toHaveURL(/\/content\/[0-9a-f-]+/);
+    await page.goto("/library/history");
+    await expect(
+      page.getByRole("heading", { name: "View history" }),
+    ).toBeVisible();
+    await expect(page.getByText("Deterministic fixture image")).toBeVisible();
+
+    await page.goto("/settings");
+    const history = page.getByRole("checkbox", {
+      name: "Keep detailed view history",
+    });
+    await history.uncheck();
+    await expect(page.getByText("History preference saved.")).toBeVisible();
+    await page.goto("/library/history");
+    await expect(
+      page.getByRole("heading", { name: "View history is disabled" }),
+    ).toBeVisible();
+  });
 });
 
 async function signIn(page: Page) {

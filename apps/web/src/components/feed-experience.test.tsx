@@ -14,6 +14,12 @@ afterEach(() => {
 
 const emptyPage: FeedPage = { hasMore: false, items: [], nextCursor: null };
 const item = {
+  actionState: {
+    favorite: false,
+    hidden: false,
+    viewed: false,
+    view: null,
+  },
   alternateSourceCount: 0,
   authorName: null,
   contentRating: "SAFE" as const,

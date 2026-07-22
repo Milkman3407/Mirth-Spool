@@ -6,6 +6,7 @@ import type {
   Prisma,
   PrismaClient,
 } from "../generated/prisma/client.js";
+import { contentPresentationInclude } from "./user-actions.js";
 
 export type FeedMode = "hot" | "new" | "random" | "unseen";
 export type FeedPosition = Readonly<{
@@ -31,25 +32,12 @@ export interface FeedQuery {
   readonly userId: string;
 }
 
-const feedInclude = {
-  mediaAssets: {
-    orderBy: [{ ordinal: "asc" as const }, { id: "asc" as const }],
-  },
-  primarySourcePost: {
-    include: {
-      source: { select: { displayName: true, id: true, kind: true } },
-    },
-  },
-  sourcePosts: { select: { id: true } },
-  tags: { include: { tag: true }, orderBy: { tagId: "asc" as const } },
-} satisfies Prisma.ContentItemInclude;
-
 export async function queryFeed(client: PrismaClient, input: FeedQuery) {
   z.number().int().min(1).max(50).parse(input.limit);
   z.uuid().parse(input.userId);
   const where = feedWhere(input);
   const rows = await client.contentItem.findMany({
-    include: feedInclude,
+    include: contentPresentationInclude(input.userId),
     orderBy: orderFor(input.mode),
     take: input.limit + 1,
     where,
@@ -70,11 +58,7 @@ export function getFeedContent(
 ) {
   return client.contentItem.findFirst({
     include: {
-      ...feedInclude,
-      actions: {
-        where: { userId: input.userId },
-        select: { kind: true, occurredAt: true },
-      },
+      ...contentPresentationInclude(input.userId),
       sourcePosts: {
         include: {
           source: { select: { displayName: true, id: true, kind: true } },
@@ -83,10 +67,16 @@ export function getFeedContent(
       },
     },
     where: {
-      actions: { none: { kind: "HIDE", userId: input.userId } },
       contentRating: { in: [...input.allowedRatings] },
       id: z.uuid().parse(input.contentId),
-      status: "ACTIVE",
+      OR: [
+        { status: "ACTIVE" },
+        {
+          actions: {
+            some: { kind: "FAVORITE", userId: input.userId },
+          },
+        },
+      ],
     },
   });
 }

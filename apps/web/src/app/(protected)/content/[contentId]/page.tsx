@@ -36,7 +36,7 @@ export default async function ContentDetailPage({
       <Link className="back-link" href="/">
         <span aria-hidden="true">←</span> Back to feed
       </Link>
-      <FeedCard headingLevel={1} item={item} />
+      <FeedCard headingLevel={1} item={item} viewPolicy="navigation" />
 
       <section
         className="detail-panel"

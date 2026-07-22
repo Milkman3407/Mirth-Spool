@@ -1,13 +1,23 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { createElement } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FeedItem, FeedMedia } from "../lib/feed/client-schema";
 import { FeedCard, MediaFrame, safeHttpUrl } from "./feed-card";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 const image: FeedMedia = {
   altText: "A synthetic test image",
@@ -22,6 +32,12 @@ const image: FeedMedia = {
 };
 
 const item: FeedItem = {
+  actionState: {
+    favorite: false,
+    hidden: false,
+    viewed: false,
+    view: null,
+  },
   alternateSourceCount: 1,
   authorName: "Fixture author",
   contentRating: "ADULT",
@@ -106,5 +122,56 @@ describe("feed media presentation", () => {
     expect(safeHttpUrl("https://example.test/media.png")).toBe(
       "https://example.test/media.png",
     );
+  });
+
+  it("records a view only after 50 percent visibility is sustained", async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        actionState: {
+          favorite: false,
+          hidden: false,
+          viewed: true,
+          view: {
+            count: 1,
+            firstViewedAt: "2026-07-22T00:00:00.000Z",
+            lastViewedAt: "2026-07-22T00:00:00.000Z",
+          },
+        },
+        contentId: item.id,
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(private readonly callback: IntersectionObserverCallback) {}
+        disconnect() {}
+        observe(target: Element) {
+          this.callback(
+            [
+              {
+                intersectionRatio: 0.5,
+                isIntersecting: true,
+                target,
+              } as IntersectionObserverEntry,
+            ],
+            this as unknown as IntersectionObserver,
+          );
+        }
+        takeRecords() {
+          return [];
+        }
+        unobserve() {}
+        readonly root = null;
+        readonly rootMargin = "0px";
+        readonly thresholds = [0.5];
+      },
+    );
+    render(createElement(FeedCard, { item, viewPolicy: "visibility" }));
+    await act(() => vi.advanceTimersByTimeAsync(1_499));
+    expect(fetch).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
