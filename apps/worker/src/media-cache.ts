@@ -131,7 +131,7 @@ export function createMediaCacheProcessor(dependencies: {
       const updated = await dependencies.database.$transaction(
         async (transaction) => {
           await acquireQuotaLock(transaction);
-          return transaction.mediaAsset.updateMany({
+          const media = await transaction.mediaAsset.updateMany({
             data: {
               byteLength: BigInt(result.byteLength),
               cachedAt,
@@ -146,6 +146,13 @@ export function createMediaCacheProcessor(dependencies: {
             },
             where: { cacheState: "FETCHING", id: data.mediaId },
           });
+          if (media.count > 0) {
+            await transaction.contentItem.update({
+              data: { duplicateAnalyzedAt: null },
+              where: { id: claim.contentItemId },
+            });
+          }
+          return media;
         },
       );
       if (updated.count === 0) {
@@ -319,6 +326,7 @@ async function claimMedia(
               take: 1,
               where: { kind: "FAVORITE" },
             },
+            id: true,
             status: true,
           },
         },
@@ -425,6 +433,7 @@ async function claimMedia(
       ? null
       : Object.freeze({
           configuration,
+          contentItemId: asset.contentItem.id,
           evictedObjects,
           kind: asset.kind as "ANIMATED_IMAGE" | "IMAGE" | "VIDEO",
           remoteUrl: asset.remoteUrl,

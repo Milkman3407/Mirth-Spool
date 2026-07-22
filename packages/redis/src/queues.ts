@@ -28,6 +28,19 @@ export interface MediaCacheJobData {
   readonly requestedAt: string;
 }
 
+export interface DuplicateDetectionJobData {
+  readonly contentId: string;
+  readonly requestedAt: string;
+}
+
+export interface DuplicateDetectionEnqueuer {
+  add(
+    name: "analyze",
+    data: DuplicateDetectionJobData,
+    options: JobsOptions,
+  ): Promise<{ readonly id?: string }>;
+}
+
 export interface MediaCacheEnqueuer {
   add(
     name: "cache",
@@ -122,6 +135,27 @@ export function createMediaCacheQueue(
   });
 }
 
+export function createDuplicateDetectionQueue(
+  redisUrl: string,
+  retention: {
+    readonly completedSeconds?: number;
+    readonly failedSeconds?: number;
+  } = {},
+): Queue<DuplicateDetectionJobData> {
+  return new Queue<DuplicateDetectionJobData>(QUEUE_NAMES.duplicateDetection, {
+    connection: bullConnectionFromUrl(redisUrl),
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { delay: 5_000, type: "exponential" },
+      removeOnComplete: {
+        age: retention.completedSeconds ?? 3_600,
+        count: 2_000,
+      },
+      removeOnFail: { age: retention.failedSeconds ?? 604_800, count: 5_000 },
+    },
+  });
+}
+
 export function createCacheMaintenanceQueue(
   redisUrl: string,
 ): Queue<CacheMaintenanceJobData> {
@@ -154,6 +188,41 @@ export function assertMediaCacheJobData(input: unknown): MediaCacheJobData {
     mediaId: value.mediaId,
     requestedAt: value.requestedAt,
   });
+}
+
+export function assertDuplicateDetectionJobData(
+  input: unknown,
+): DuplicateDetectionJobData {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new TypeError("Invalid duplicate detection job.");
+  }
+  const value = input as Record<string, unknown>;
+  if (
+    typeof value.contentId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value.contentId,
+    ) ||
+    typeof value.requestedAt !== "string" ||
+    !Number.isFinite(Date.parse(value.requestedAt))
+  ) {
+    throw new TypeError("Invalid duplicate detection job.");
+  }
+  return Object.freeze({
+    contentId: value.contentId,
+    requestedAt: value.requestedAt,
+  });
+}
+
+export async function enqueueDuplicateDetection(
+  queue: DuplicateDetectionEnqueuer,
+  data: DuplicateDetectionJobData,
+): Promise<{ readonly id: string }> {
+  const validated = assertDuplicateDetectionJobData(data);
+  const jobId = `duplicate-${validated.contentId}-${Date.parse(
+    validated.requestedAt,
+  )}`;
+  const job = await queue.add("analyze", validated, { jobId });
+  return Object.freeze({ id: job.id ?? jobId });
 }
 
 export async function enqueueMediaCache(

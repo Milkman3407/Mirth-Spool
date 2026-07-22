@@ -107,6 +107,12 @@ export function FeedCard({
           decay
         </p>
       ) : null}
+      {item.duplicateGroup ? (
+        <p className="duplicate-note">
+          Grouped duplicate · {item.duplicateGroup.itemCount} preserved
+          occurrences
+        </p>
+      ) : null}
 
       <ContentActions
         contentId={item.id}

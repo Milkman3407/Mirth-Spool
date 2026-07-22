@@ -14,6 +14,7 @@ export {
 } from "./raw-payload.js";
 export type { Clock, RepositoryClient } from "./repository-types.js";
 export * from "./feed-ranking.js";
+export * from "./tags.js";
 export * from "./repositories/feed.js";
 export {
   getSettingDefault,
@@ -26,8 +27,11 @@ export {
 } from "./settings.js";
 export * from "./repositories/content.js";
 export * from "./repositories/cache.js";
+export * from "./repositories/duplicates.js";
+export * from "./repositories/admin-tags.js";
 export * from "./repositories/ingestion-runs.js";
 export * from "./repositories/ingestion.js";
 export * from "./repositories/media.js";
+export * from "./repositories/search.js";
 export * from "./repositories/sources.js";
 export * from "./repositories/user-actions.js";
