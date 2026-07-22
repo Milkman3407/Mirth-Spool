@@ -172,6 +172,9 @@ importers:
 
   packages/redis:
     dependencies:
+      '@mirthspool/connectors':
+        specifier: workspace:*
+        version: link:../connectors
       '@mirthspool/shared':
         specifier: workspace:*
         version: link:../shared

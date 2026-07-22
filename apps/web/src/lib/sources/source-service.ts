@@ -2,7 +2,9 @@ import {
   type ConnectorHttpClient,
   type ConnectorLogger,
   type ConnectorRegistry,
+  type ConnectorTokenCache,
   type HardenedHttpRequest,
+  redditCredentialSchema,
   type SourceKind,
 } from "@mirthspool/connectors";
 import { safeConnectorFailure } from "@mirthspool/connectors/errors";
@@ -45,6 +47,7 @@ export interface SourceServiceDependencies {
   readonly logger: ConnectorLogger;
   readonly now?: () => Date;
   readonly registry: ConnectorRegistry;
+  readonly tokenCache?: ConnectorTokenCache;
 }
 
 export function sourceServiceKeyring(
@@ -363,7 +366,25 @@ export async function rotateSourceCredential(
   sourceId: string,
   input: CredentialInput,
 ) {
-  await readManagedSource(dependencies, sourceId);
+  const source = await readManagedSource(dependencies, sourceId);
+  if (source.kind === "REDDIT") {
+    if (input.kind !== "OAUTH_CLIENT" || input.label !== "primary") {
+      throw new SourceServiceError(
+        "SOURCE_REDDIT_CREDENTIAL_INVALID",
+        "Reddit requires the primary OAuth client credential.",
+        422,
+      );
+    }
+    const parsed = redditCredentialSchema.safeParse(input.payload);
+    if (!parsed.success) {
+      throw new SourceServiceError(
+        "SOURCE_REDDIT_CREDENTIAL_INVALID",
+        "The Reddit OAuth client credential is invalid.",
+        422,
+      );
+    }
+    input = { ...input, payload: parsed.data };
+  }
   const binding = { kind: input.kind, label: input.label, sourceId };
   const encryptedPayload = Buffer.from(
     encryptCredential(input.payload, binding, dependencies.keyring),
@@ -453,7 +474,7 @@ export async function validateManagedSource(
         {
           abortSignal,
           clock: { now },
-          credentials: Object.freeze(credentialValues),
+          credentials: credentialValues,
           http: boundedHttp,
           limits: {
             maxBytes: 5_000_000,
@@ -462,6 +483,9 @@ export async function validateManagedSource(
             maxRequests: 3,
           },
           logger: dependencies.logger,
+          ...(dependencies.tokenCache
+            ? { tokenCache: dependencies.tokenCache }
+            : {}),
         },
         source.configJson,
       ),

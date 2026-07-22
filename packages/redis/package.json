@@ -21,6 +21,7 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@mirthspool/connectors": "workspace:*",
     "@mirthspool/shared": "workspace:*",
     "bullmq": "5.58.5",
     "redis": "6.1.0"

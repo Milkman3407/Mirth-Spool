@@ -3,9 +3,12 @@
 MirthSpool is a private, self-hosted content aggregator for administrator-selected meme-oriented sources. The project is being built milestone by milestone from the checked-in [Codex build pack](mirthspool-codex-plan/README.md).
 
 The repository includes the local runtime, PostgreSQL domain model, private
-authentication, official RSS, Lemmy, and Mastodon-compatible API ingestion,
+authentication, official RSS, Lemmy, Mastodon-compatible, and approved Reddit
+Data API ingestion,
 ranked browsing, and private user libraries through M11. Manual content-upload
-functionality is intentionally not present.
+functionality is intentionally not present. Reddit sources require an
+operator-registered and approved OAuth client; see the
+[connector security boundary](docs/CONNECTORS.md) before enabling one.
 
 ## Prerequisites
 

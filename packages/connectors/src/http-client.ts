@@ -131,6 +131,15 @@ function requestHeaders(
   input: Readonly<Record<string, string>> | undefined,
   userAgent: string,
 ): Readonly<Record<string, string>> {
+  if (
+    userAgent.length < 1 ||
+    userAgent.length > 500 ||
+    /[\r\n]/u.test(userAgent)
+  ) {
+    throw new ConnectorError("CONFIGURATION", {
+      code: "SOURCE_USER_AGENT_INVALID",
+    });
+  }
   const result: Record<string, string> = {
     accept: "application/json, application/xml, text/xml, */*;q=0.1",
     "user-agent": userAgent,
@@ -424,7 +433,10 @@ export class HardenedHttpClient implements ConnectorHttpClient {
         code: "SOURCE_URL_REJECTED",
       });
     }
-    let headers = requestHeaders(input.headers, this.#userAgent);
+    let headers = requestHeaders(
+      input.headers,
+      input.userAgent ?? this.#userAgent,
+    );
     let method = input.method ?? "GET";
     let body = input.body;
     for (

@@ -1,8 +1,8 @@
 # Connector SDK and source-management boundary
 
 M04 defines the provider-independent boundary. M05 adds public RSS 2.0 and Atom
-feeds. M10 adds public Lemmy communities through the documented instance API.
-Mastodon and Reddit remain unavailable until their own reviewed milestones.
+feeds. M10 adds public Lemmy communities, M11 adds public Mastodon-compatible
+media timelines, and M12 adds approved Reddit Data API subreddit ingestion.
 
 ## Connector contract
 
@@ -15,6 +15,7 @@ is registered by `SourceKind` and receives only:
 - decrypted credentials scoped to the call;
 - an injected clock and abort signal;
 - a structured logger; and
+- a short-lived Redis OAuth-token cache when a connector requires it; and
 - explicit request, byte, item, and page limits.
 
 Provider modules must not instantiate `fetch`, Node HTTP clients, or another
@@ -105,6 +106,79 @@ classes.
 References: [official Lemmy API documentation](https://join-lemmy.org/docs/contributors/04-api.html),
 [official 0.19 client types](https://join-lemmy.org/lemmy-js-client-docs/v0.19/interfaces/GetPosts.html),
 and the [official API v4 upgrade guide](https://join-lemmy.org/docs/contributors/09-api-v4.html).
+No unsupported HTML scraping is used.
+
+## Reddit connector review
+
+- Official API and current access assumptions: only Reddit's OAuth Data API is
+  used: app-only `POST https://www.reddit.com/api/v1/access_token`,
+  `GET https://oauth.reddit.com/r/:subreddit/about`, and the official subreddit
+  listing endpoints. The implementation was reviewed against Reddit's official
+  documentation and terms current on 2026-07-22. Operators must register and
+  obtain Reddit approval for their use case; Data API availability is not
+  implied by installing MirthSpool. Commercial use requires Reddit's permission
+  and may require a separate contract. Legacy technical documentation may be
+  outdated, so operators must re-check the current terms before enabling a
+  source.
+- Authentication and scope: a confidential server-side OAuth client uses the
+  `client_credentials` grant and requests only `read`. The client ID, client
+  secret, and Reddit-required descriptive User-Agent are stored together as the
+  encrypted `primary` `OAUTH_CLIENT` source credential. They never enter general
+  source JSON, GET responses, browser bundles, logs, fixtures, or snapshots.
+  MirthSpool never requests or implements vote, comment, submit, subscribe,
+  message, account-browsing, or impersonation capabilities.
+- Token lifecycle: access tokens are cached only in Redis under a SHA-256 cache
+  key, with expiry shortened by a 30-second safety margin. A bounded Redis lock
+  prevents concurrent workers from refreshing the same client token together.
+  Redis remains reconstructable; plaintext tokens are neither persisted in
+  PostgreSQL nor returned through APIs. Cache failure fails closed instead of
+  obtaining uncoordinated tokens.
+- Configuration: subreddit names are validated and bounded. Sort, top time
+  window, minimum score, stickied inclusion, adult-content policy, 1â€“100 posts
+  per page, and 1â€“10 pages per run are explicit. Worker request, byte, item,
+  duration, page, and retry limits remain authoritative.
+- Access controls: validation checks the official subreddit-about resource and
+  a bounded listing sample. Private, archived/restricted, banned/missing, and
+  quarantined communities map to stable failures. MirthSpool does not opt into,
+  acknowledge, or otherwise bypass adult/quarantine gates.
+- Pagination and rate limits: listing `after` values are treated as opaque and
+  retained with the page number and at most 200 emitted post fullnames. A
+  completed run starts at the newest listing again; database uniqueness on
+  `(sourceId, externalId)` is the durable idempotency boundary. `Retry-After`,
+  `X-Ratelimit-Remaining`, and relative `X-Ratelimit-Reset` are honored.
+  Exhausted successful responses delay the next poll and record the reset on the
+  ingestion run; 429 responses use bounded queue backoff. The documented free
+  ceiling is currently 100 queries per minute per OAuth client ID averaged over
+  ten minutes, but MirthSpool trusts response headers and never treats that
+  ceiling as guaranteed capacity.
+- Attribution and crossposts: opaque `t3_` fullnames, title, author, subreddit,
+  permalink, publication time, score, comments, adult/spoiler flags, and removal
+  state are normalized. Crossposts retain the outer post ID, author, title, and
+  permalink for stable occurrence attribution while selecting media from the
+  single API-supplied parent deterministically.
+- Media: direct raster/GIF URLs, ordered gallery metadata, and hosted Reddit
+  fallback MP4 metadata are normalized without downloading bytes. Unrecognized
+  outbound destinations become `LINK` assets only. Destination pages, embeds,
+  alternate renditions, manifests, and rendered HTML are never fetched or
+  scraped.
+- Rating and deletion: `over_18` is excluded by default or maps explicitly to
+  `SENSITIVE`/`ADULT`; spoilers map to `SENSITIVE`; unknown flags are never
+  invented as safe. Removed/deleted responses discard author, title, and media
+  and mark the occurrence removed. Reddit's current deletion requirements apply
+  to operators and are documented as requiring deletion of content and
+  author-identifying data reported deleted by the API.
+- Fixtures and tests: `tests/fixtures/reddit` is synthetic and contains no real
+  credentials, users, private content, or copied posts. Unit and integration
+  tests mock OAuth/API traffic and cover direct images, galleries, hosted video,
+  link fallback, crossposts, ratings, stickies, removal, access errors,
+  pagination, malformed payloads, rate limits, token hit/expiry/refresh, and
+  refresh-stampede prevention. CI makes no request to Reddit.
+
+References: [Reddit Data API Wiki](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki),
+[Developer Platform and Data API access](https://support.reddithelp.com/hc/en-us/articles/14945211791892-Developer-Platform-Accessing-Reddit-Data),
+[Data API Terms](https://redditinc.com/policies/data-api-terms),
+[OAuth2 technical guidance](https://github.com/reddit-archive/reddit/wiki/OAuth2),
+and the [live API documentation](https://www.reddit.com/dev/api/).
 No unsupported HTML scraping is used.
 
 ## Mastodon-compatible connector review
