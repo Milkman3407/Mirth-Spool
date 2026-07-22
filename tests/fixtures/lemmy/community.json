@@ -1,0 +1,17 @@
+{
+  "community_view": {
+    "community": {
+      "actor_id": "https://lemmy.example/c/memes",
+      "deleted": false,
+      "id": 41,
+      "name": "memes",
+      "nsfw": false,
+      "removed": false,
+      "title": "Synthetic Memes"
+    },
+    "counts": {
+      "posts": 6,
+      "subscribers": 12
+    }
+  }
+}

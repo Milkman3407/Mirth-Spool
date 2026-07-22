@@ -50,6 +50,9 @@ export default async function ContentDetailPage({
               <div>
                 <strong>{occurrence.source.displayName}</strong>
                 <span>
+                  {occurrence.communityName
+                    ? `${occurrence.communityName} · `
+                    : ""}
                   {occurrence.providerAuthor ?? "Unknown author"}
                   {occurrence.providerPublishedAt
                     ? ` · ${formatDate(occurrence.providerPublishedAt)}`

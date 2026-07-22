@@ -5,6 +5,7 @@ import process from "node:process";
 import {
   ConnectorRegistry,
   HardenedHttpClient,
+  lemmyConnector,
   rssConnector,
 } from "@mirthspool/connectors";
 import { loadServerConfig } from "@mirthspool/config/server";
@@ -92,7 +93,7 @@ async function main(): Promise<void> {
         maxRequests: 12,
       },
       logger,
-      registry: new ConnectorRegistry([rssConnector]),
+      registry: new ConnectorRegistry([rssConnector, lemmyConnector]),
       shutdownSignal: shutdownController.signal,
     }),
     {

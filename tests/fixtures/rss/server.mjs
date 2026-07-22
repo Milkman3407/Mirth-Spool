@@ -4,6 +4,12 @@ import { createServer } from "node:http";
 import { URL } from "node:url";
 
 const feed = await readFile(new URL("./feed.xml", import.meta.url));
+const lemmyCommunity = await readFile(
+  new URL("./lemmy/community.json", import.meta.url),
+);
+const lemmyPosts = await readFile(
+  new URL("./lemmy/posts-page-1.json", import.meta.url),
+);
 let controlledFeedFails = false;
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -15,6 +21,42 @@ const gif = Buffer.from(
 );
 
 createServer((request, response) => {
+  const requestUrl = new URL(request.url ?? "/", "http://fixture.local");
+  if (requestUrl.pathname === "/api/v3/community") {
+    if (
+      requestUrl.searchParams.get("name") !== "memes" &&
+      requestUrl.searchParams.get("id") !== "41"
+    ) {
+      const body = Buffer.from(
+        JSON.stringify({ error: "couldnt_find_community" }),
+      );
+      response.writeHead(400, {
+        "content-length": String(body.byteLength),
+        "content-type": "application/json",
+      });
+      response.end(body);
+      return;
+    }
+    response.writeHead(200, {
+      "content-length": String(lemmyCommunity.byteLength),
+      "content-type": "application/json",
+    });
+    response.end(lemmyCommunity);
+    return;
+  }
+  if (requestUrl.pathname === "/api/v3/post/list") {
+    const body =
+      requestUrl.searchParams.get("page") === "1"
+        ? lemmyPosts
+        : Buffer.from('{"posts":[]}');
+    response.writeHead(200, {
+      "content-length": String(body.byteLength),
+      "content-type": "application/json",
+      "x-ratelimit-remaining": "99",
+    });
+    response.end(body);
+    return;
+  }
   if (request.url === "/media/image.png") {
     response.writeHead(200, {
       "cache-control": "public, max-age=60",
@@ -38,18 +80,18 @@ createServer((request, response) => {
     response.end(Buffer.from("synthetic-invalid-video"));
     return;
   }
-  if (request.url === "/control/fail" && request.method === "POST") {
+  if (requestUrl.pathname === "/control/fail" && request.method === "POST") {
     controlledFeedFails = true;
     response.writeHead(204).end();
     return;
   }
 
-  if (request.url === "/controlled.xml") {
+  if (requestUrl.pathname === "/controlled.xml") {
     if (controlledFeedFails) {
       response.writeHead(404).end();
       return;
     }
-  } else if (request.url !== "/feed.xml") {
+  } else if (requestUrl.pathname !== "/feed.xml") {
     response.writeHead(404).end();
     return;
   }
