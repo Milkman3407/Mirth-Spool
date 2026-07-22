@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import type {
@@ -9,6 +10,7 @@ import type {
 } from "../generated/prisma/client.js";
 import type { Clock } from "../repository-types.js";
 import { systemClock } from "../repository-types.js";
+import { contentRandomKey } from "../feed-ranking.js";
 import {
   DISABLED_RAW_PAYLOAD_POLICY,
   prepareRawPayload,
@@ -98,8 +100,11 @@ export async function upsertNormalizedContent(
           });
         }
 
+        const contentId = randomUUID();
         const contentItem = await transaction.contentItem.create({
           data: {
+            id: contentId,
+            randomKey: contentRandomKey(contentId),
             ...(normalized.title !== undefined
               ? { title: normalized.title }
               : {}),
