@@ -34,7 +34,7 @@ jobs:
         run: pnpm docs:check
       - name: Verify release metadata
         env:
-          MIRTHSPOOL_RELEASE_TAG: v0.1.0
+          MIRTHSPOOL_RELEASE_TAG: v0.1.1
         run: pnpm release:verify
       - name: Lint
         run: pnpm lint

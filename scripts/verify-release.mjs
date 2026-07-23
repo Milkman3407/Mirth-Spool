@@ -10,6 +10,7 @@ const packageJson = JSON.parse(
 const version = packageJson.version;
 const expectedTag = `v${version}`;
 const suppliedTag = process.env.MIRTHSPOOL_RELEASE_TAG;
+const releaseNotesPath = `docs/releases/${expectedTag}.md`;
 
 function fail(message) {
   console.error(`release verification failed: ${message}`);
@@ -36,7 +37,7 @@ const requiredText = new Map([
     "apps/worker/Dockerfile",
     ['org.opencontainers.image.licenses="Apache-2.0"'],
   ],
-  ["docs/releases/v0.1.0.md", [`# MirthSpool ${expectedTag}`]],
+  [releaseNotesPath, [`# MirthSpool ${expectedTag}`]],
   [
     "compose.release.yaml",
     [`mirth-spool-web:${version}`, `mirth-spool-worker:${version}`],
