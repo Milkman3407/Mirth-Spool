@@ -181,9 +181,10 @@ jobs:
       - name: Publish release notes, digests, and SBOMs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: docs/releases/${{ github.ref_name }}.md
         run: |
           gh release create "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" \
             --title "MirthSpool ${{ github.ref_name }}" \
-            --notes-file docs/releases/v0.1.0.md \
+            --notes-file "$RELEASE_NOTES" \
             release-artifacts/*

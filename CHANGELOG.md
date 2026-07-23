@@ -5,6 +5,15 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-23
+
+### Fixed
+
+- Kept every Compose service within the documented four-core host minimum so
+  clean release acceptance can run on the supported baseline.
+- Made release verification, image metadata, acceptance builds, and release
+  notes follow the tagged patch version without rewriting an immutable tag.
+
 ## [0.1.0] - 2026-07-22
 
 ### Added
@@ -27,5 +36,6 @@ see [VERSIONING.md](VERSIONING.md).
   defenses, redacted diagnostics, dependency/secret/container scans, and
   authenticated administration surfaces.
 
-[Unreleased]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Milkman3407/Mirth-Spool/releases/tag/v0.1.0
