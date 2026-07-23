@@ -2,6 +2,7 @@
 
 import {
   consumeRateLimit,
+  consumeInvitationAcceptanceLimits,
   getClientAddress,
   hashRateLimitSubject,
   type RateLimitStore,
@@ -13,6 +14,18 @@ class FakeStore implements RateLimitStore {
   increment(): Promise<{ count: number; retryAfterSeconds: number }> {
     this.count += 1;
     return Promise.resolve({ count: this.count, retryAfterSeconds: 60 });
+  }
+}
+
+class KeyedFakeStore implements RateLimitStore {
+  readonly counts = new Map<string, number>();
+
+  increment(
+    key: string,
+  ): Promise<{ count: number; retryAfterSeconds: number }> {
+    const count = (this.counts.get(key) ?? 0) + 1;
+    this.counts.set(key, count);
+    return Promise.resolve({ count, retryAfterSeconds: 900 });
   }
 }
 
@@ -54,5 +67,25 @@ describe("authentication rate limiting", () => {
       hashRateLimitSubject("secret", "login", "admin@example.invalid"),
     );
     expect(result).not.toContain("admin");
+  });
+
+  it("limits invitation brute force by token digest and address", async () => {
+    const store = new KeyedFakeStore();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect(
+        await consumeInvitationAcceptanceLimits(store, {
+          address: "203.0.113.8",
+          secret: "secret",
+          tokenHash: "opaque-token-digest",
+        }),
+      ).toMatchObject({ allowed: true });
+    }
+    expect(
+      await consumeInvitationAcceptanceLimits(store, {
+        address: "203.0.113.8",
+        secret: "secret",
+        tokenHash: "opaque-token-digest",
+      }),
+    ).toEqual({ allowed: false, retryAfterSeconds: 900 });
   });
 });

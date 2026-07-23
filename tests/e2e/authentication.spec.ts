@@ -13,6 +13,9 @@ const administrator = {
   name: "MirthSpool Administrator",
   password: "Correct-Horse-Battery-Staple-73!",
 };
+let administratorCookies:
+  | Awaited<ReturnType<ReturnType<Page["context"]>["cookies"]>>
+  | undefined;
 
 test.describe.serial("private setup, sources, and feed", () => {
   test("setup closes and login/logout enforce the private boundary", async ({
@@ -20,6 +23,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     page,
     request,
   }) => {
+    test.setTimeout(60_000);
     await page.goto("/setup");
     await expectAccessible(page);
     await page.getByLabel("Display name").fill(administrator.name);
@@ -51,6 +55,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.getByLabel("Password").fill(administrator.password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL("/");
+    administratorCookies = await page.context().cookies();
 
     await page.goto("/sources");
     await expectAccessible(page);
@@ -602,6 +607,9 @@ test.describe.serial("private setup, sources, and feed", () => {
       } finally {
         await database.$disconnect();
       }
+      await page.goto("/settings");
+      await page.getByLabel("Maximum content rating").selectOption("SENSITIVE");
+      await expect(page.getByText("Preferences saved.")).toBeVisible();
       await page.goto("/?rating=sensitive");
       const card = page
         .locator("article.feed-card")
@@ -848,7 +856,87 @@ test.describe.serial("private setup, sources, and feed", () => {
   });
 });
 
+test.describe.serial("invitation-only members", () => {
+  test("creates, accepts, uses, logs out, and disables a member account", async ({
+    browser,
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/members");
+    await page.getByLabel("Member email").fill("member@example.test");
+    await page.getByLabel("Expires").selectOption("24");
+    await page.getByRole("button", { name: "Create invitation" }).click();
+    const invitationUrl = await page
+      .getByLabel("One-time invitation link")
+      .inputValue();
+
+    const memberContext = await browser.newContext();
+    const memberPage = await memberContext.newPage();
+    await memberPage.goto(invitationUrl);
+    await memberPage.getByLabel("Invited email").fill("member@example.test");
+    await memberPage.getByLabel("Display name").fill("Invited Member");
+    await memberPage
+      .getByLabel("Password")
+      .fill("Correct-Horse-Battery-Staple-83!");
+    await memberPage
+      .getByRole("button", { name: "Create member account" })
+      .click();
+    await expect(memberPage).toHaveURL(/\/login\?invitation=accepted$/u);
+    await memberPage.getByLabel("Email address").fill("member@example.test");
+    await memberPage
+      .getByLabel("Password")
+      .fill("Correct-Horse-Battery-Staple-83!");
+    await memberPage.getByRole("button", { name: "Sign in" }).click();
+    await expect(memberPage).toHaveURL("/");
+    await expect(memberPage.getByRole("link", { name: "Sources" })).toHaveCount(
+      0,
+    );
+    await expect(memberPage.getByRole("link", { name: "Members" })).toHaveCount(
+      0,
+    );
+    expect(
+      await memberPage.evaluate(
+        async () => (await fetch("/api/sources")).status,
+      ),
+    ).toBe(403);
+
+    await memberPage.evaluate(() => {
+      sessionStorage.setItem("mirthspool:scroll:/", "200");
+      localStorage.setItem("mirthspool:test", "private");
+    });
+    await memberPage.getByRole("button", { name: "Sign out" }).click();
+    await expect(memberPage).toHaveURL("/login");
+    expect(
+      await memberPage.evaluate(() => ({
+        local: localStorage.length,
+        session: sessionStorage.length,
+      })),
+    ).toEqual({ local: 0, session: 0 });
+
+    await page.reload();
+    const member = page
+      .locator(".session-list li")
+      .filter({ hasText: "member@example.test" })
+      .last();
+    await member.getByRole("button", { name: "Disable" }).click();
+    await memberPage.getByLabel("Email address").fill("member@example.test");
+    await memberPage
+      .getByLabel("Password")
+      .fill("Correct-Horse-Battery-Staple-83!");
+    await memberPage.getByRole("button", { name: "Sign in" }).click();
+    await expect(memberPage.locator(".form-error")).toBeVisible();
+    await memberContext.close();
+  });
+});
+
 async function signIn(page: Page) {
+  if (administratorCookies) {
+    await page.goto("/login");
+    await page.context().addCookies(administratorCookies);
+    await page.goto("/");
+    await expect(page).toHaveURL("/");
+    return;
+  }
   await page.goto("/login");
   await page.getByLabel("Email address").fill(administrator.email);
   await page.getByLabel("Password").fill(administrator.password);

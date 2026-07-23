@@ -59,6 +59,7 @@ async function serve(
       method,
       now: new Date(),
       range: request.headers.get("range"),
+      userId: authentication.session.user.id,
     });
     return (
       response ??

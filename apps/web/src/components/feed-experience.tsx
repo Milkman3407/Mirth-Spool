@@ -241,8 +241,14 @@ function useFeedPosition(routeKey: string) {
         ? window.setTimeout(() => window.scrollTo({ top: saved }), 250)
         : undefined;
     let saveFrame: number | undefined;
-    const save = () =>
+    const save = () => {
+      if (
+        document.documentElement.dataset.mirthspoolClearingSession === "true"
+      ) {
+        return;
+      }
       window.sessionStorage.setItem(key, String(window.scrollY));
+    };
     const queueSave = () => {
       if (saveFrame !== undefined) return;
       saveFrame = window.requestAnimationFrame(() => {

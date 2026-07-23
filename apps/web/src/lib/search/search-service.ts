@@ -1,6 +1,7 @@
 import {
   querySearch,
   readSetting,
+  readUserPreferences,
   type ContentRating,
   type SearchQuery,
 } from "../../../../../packages/db/dist/index";
@@ -23,9 +24,12 @@ export async function readSearch(
   const parsed = parseSearchQuery(url);
   if (parsed.hidden && !options.allowHidden)
     throw new Error("FORBIDDEN_FILTER");
-  const ceiling = await readSetting(services.database, "content.maximumRating");
+  const [ceiling, preferences] = await Promise.all([
+    readSetting(services.database, "content.maximumRating"),
+    readUserPreferences(services.database, userId),
+  ]);
   const allowedRatings = requestedRatings(
-    ratingsFor(ceiling),
+    ratingsFor(ceiling, undefined, preferences.maximumContentRating),
     parsed.requestedRatings,
   );
   const cursor = parsed.cursor

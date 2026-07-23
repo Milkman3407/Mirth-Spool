@@ -1,6 +1,7 @@
 import {
   queryLibrary,
   readSetting,
+  readUserPreferences,
   type LibraryKind,
 } from "../../../../../packages/db/dist/index";
 
@@ -28,17 +29,20 @@ export async function readLibrary(
   now = new Date(),
 ) {
   const query = parseLibraryQuery(url);
-  const [ceiling, historyEnabled] = await Promise.all([
+  const [ceiling, preferences] = await Promise.all([
     readSetting(services.database, "content.maximumRating"),
-    readSetting(services.database, "history.enabled"),
+    readUserPreferences(services.database, userId),
   ]);
+  const historyEnabled = preferences.historyEnabled;
   if (kind === "history" && !historyEnabled) throw new HistoryDisabledError();
   const cursor = query.cursor
     ? decodeLibraryCursor(query.cursor, services.secret)
     : undefined;
   if (cursor && cursor.k !== kind) throw new Error("INVALID_CURSOR");
   const page = await queryLibrary(services.database, {
-    allowedRatings: [...ratingsFor(ceiling)],
+    allowedRatings: [
+      ...ratingsFor(ceiling, undefined, preferences.maximumContentRating),
+    ],
     kind,
     limit: query.limit,
     ...(cursor
