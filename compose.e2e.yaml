@@ -17,7 +17,9 @@ services:
       timeout: 2s
       retries: 10
     networks:
-      - backend
+      backend:
+        aliases:
+          - fixture-failure
     ports:
       - "127.0.0.1:55435:8080"
     read_only: true
