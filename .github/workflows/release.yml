@@ -82,8 +82,10 @@ jobs:
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL mirthspool-web:release-acceptance
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL mirthspool-worker:release-acceptance
+      - name: Build host test dependencies
+        run: pnpm build
       - name: Install Playwright browser
-        run: pnpm --filter @mirthspool/e2e exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run browser tests against release images
         env:
           MIRTHSPOOL_WEB_IMAGE: mirthspool-web:release-acceptance
