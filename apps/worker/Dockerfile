@@ -29,7 +29,7 @@ LABEL org.opencontainers.image.title="MirthSpool worker" \
       org.opencontainers.image.source="https://github.com/Milkman3407/Mirth-Spool" \
       org.opencontainers.image.version=$BUILD_VERSION \
       org.opencontainers.image.revision=$BUILD_REVISION \
-      org.opencontainers.image.licenses="NOASSERTION"
+      org.opencontainers.image.licenses="Apache-2.0"
 
 ENV NODE_ENV=production
 WORKDIR /app

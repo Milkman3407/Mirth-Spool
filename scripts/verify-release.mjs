@@ -24,8 +24,18 @@ if (suppliedTag && suppliedTag !== expectedTag) {
   fail(`tag ${suppliedTag} does not match package version ${expectedTag}`);
 }
 
+if (packageJson.license !== "Apache-2.0") {
+  fail(`package license ${String(packageJson.license)} is not Apache-2.0`);
+}
+
 const requiredText = new Map([
   ["CHANGELOG.md", [`## [${version}]`]],
+  ["LICENSE", ["Apache License", "Version 2.0, January 2004"]],
+  ["apps/web/Dockerfile", ['org.opencontainers.image.licenses="Apache-2.0"']],
+  [
+    "apps/worker/Dockerfile",
+    ['org.opencontainers.image.licenses="Apache-2.0"'],
+  ],
   ["docs/releases/v0.1.0.md", [`# MirthSpool ${expectedTag}`]],
   [
     "compose.release.yaml",

@@ -13,6 +13,8 @@ support, restore-based database rollback, external-key dependency for encrypted
 credentials, official/public provider restrictions, privacy tradeoffs for remote
 media, no manual upload, and M18/M19 deferral.
 
-M17 remains complete only after its owner-approved license, final release-image
-acceptance results, scan/SBOM review, and tag-generated immutable digest records
-are present. Those items must never be inferred or silently checked off.
+The owner approved Apache-2.0 for MirthSpool on 2026-07-22, and the repository,
+package, and image metadata record that decision. M17 remains complete only after
+final release-image acceptance results, scan/SBOM review, and tag-generated
+immutable digest records are present. Those items must never be inferred or
+silently checked off.
