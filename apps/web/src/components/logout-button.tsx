@@ -9,6 +9,7 @@ export function LogoutButton() {
 
   async function logout() {
     setPending(true);
+    document.documentElement.dataset.mirthspoolClearingSession = "true";
     try {
       await fetch("/api/auth/sign-out", {
         headers: { "content-type": "application/json" },

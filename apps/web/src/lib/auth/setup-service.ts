@@ -45,6 +45,7 @@ export async function createFirstAdministrator(
             emailNormalized: email,
             emailVerified: true,
             name: input.name.trim(),
+            preferences: { create: {} },
             role: "ADMIN",
           },
           select: { email: true, id: true, name: true },

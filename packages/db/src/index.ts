@@ -15,6 +15,7 @@ export {
 export type { Clock, RepositoryClient } from "./repository-types.js";
 export * from "./feed-ranking.js";
 export * from "./tags.js";
+export * from "./user-preferences.js";
 export * from "./repositories/feed.js";
 export {
   getSettingDefault,

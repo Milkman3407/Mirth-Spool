@@ -58,3 +58,36 @@ export async function consumeRateLimit(
     retryAfterSeconds: result.retryAfterSeconds,
   });
 }
+
+export async function consumeInvitationAcceptanceLimits(
+  store: RateLimitStore,
+  input: {
+    readonly address: string;
+    readonly secret: string;
+    readonly tokenHash: string;
+  },
+) {
+  const [address, token] = await Promise.all([
+    consumeRateLimit(store, {
+      key: `invite-ip:${hashRateLimitSubject(
+        input.secret,
+        "invite-ip",
+        input.address,
+      )}`,
+      limit: 10,
+      windowSeconds: 900,
+    }),
+    consumeRateLimit(store, {
+      key: `invite-token:${input.tokenHash}`,
+      limit: 5,
+      windowSeconds: 900,
+    }),
+  ]);
+  return Object.freeze({
+    allowed: address.allowed && token.allowed,
+    retryAfterSeconds: Math.max(
+      address.retryAfterSeconds,
+      token.retryAfterSeconds,
+    ),
+  });
+}

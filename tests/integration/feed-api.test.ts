@@ -38,6 +38,9 @@ beforeAll(async () => {
       email: "feed@example.test",
       emailNormalized: "feed@example.test",
       name: "Feed User",
+      preferences: {
+        create: { maximumContentRating: "SENSITIVE" },
+      },
     },
   });
   const source = await database.source.create({

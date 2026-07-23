@@ -3,23 +3,37 @@ import { z } from "zod";
 
 import { apiError, apiJson } from "../../../lib/api-response";
 import {
-  readHistorySetting,
-  updateHistorySetting,
-} from "../../../lib/actions/action-service";
+  readSetting,
+  readUserPreferences,
+  writeUserPreferences,
+} from "../../../../../../packages/db/dist/index";
 import { getActionServices } from "../../../lib/actions/server";
 import { requireApiSession } from "../../../lib/auth/api-session";
 import { isSameOriginJsonMutation } from "../../../lib/auth/request-security";
 import { getAuthServices } from "../../../lib/auth/server";
 import { readBoundedJson } from "../../../lib/bounded-json";
 
-const updateSchema = z.object({ historyEnabled: z.boolean() }).strict();
+const updateSchema = z
+  .object({
+    defaultFeedMode: z.enum(["new", "hot", "random", "unseen"]).optional(),
+    historyEnabled: z.boolean().optional(),
+    maximumContentRating: z
+      .enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"])
+      .optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0);
 
 export async function GET(request: Request): Promise<Response> {
   const authentication = await requireApiSession(request);
   if ("response" in authentication) return authentication.response;
-  const historyEnabled = await readHistorySetting(getActionServices());
+  const services = getActionServices();
+  const [settings, globalMaximumRating] = await Promise.all([
+    readUserPreferences(services.database, authentication.session.user.id),
+    readSetting(services.database, "content.maximumRating"),
+  ]);
   return apiJson(
-    { settings: { historyEnabled } },
+    { globalMaximumRating, settings },
     { requestId: authentication.requestId },
   );
 }
@@ -51,13 +65,31 @@ export async function PATCH(request: Request): Promise<Response> {
     });
   }
   try {
-    const historyEnabled = await updateHistorySetting(
-      getActionServices(),
-      authentication.session.user.id,
-      body.data.historyEnabled,
+    const services = getActionServices();
+    const settings = await services.database.$transaction(
+      async (transaction) => {
+        const updated = await writeUserPreferences(
+          transaction,
+          authentication.session.user.id,
+          body.data,
+        );
+        if (body.data.historyEnabled === false) {
+          await transaction.userAction.deleteMany({
+            where: {
+              kind: "VIEW",
+              userId: authentication.session.user.id,
+            },
+          });
+        }
+        return updated;
+      },
+    );
+    const globalMaximumRating = await readSetting(
+      services.database,
+      "content.maximumRating",
     );
     return apiJson(
-      { settings: { historyEnabled } },
+      { globalMaximumRating, settings },
       { requestId: authentication.requestId },
     );
   } catch {
