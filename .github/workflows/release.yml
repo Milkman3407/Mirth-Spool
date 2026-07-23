@@ -116,11 +116,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+      - name: Compute lowercase image repository
+        id: image
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "repository=${REGISTRY}/${OWNER,,}/mirth-spool-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
       - name: Compute image metadata
         id: meta
         uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/mirth-spool-${{ matrix.service }}
+          images: ${{ steps.image.outputs.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=long,prefix=sha-
@@ -145,12 +150,12 @@ jobs:
       - name: Attest published image provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v3
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/mirth-spool-${{ matrix.service }}
+          subject-name: ${{ steps.image.outputs.repository }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
       - name: Export immutable digest and SBOM attestation
         env:
-          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/mirth-spool-${{ matrix.service }}
+          IMAGE: ${{ steps.image.outputs.repository }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           printf '%s@%s\n' "$IMAGE" "$DIGEST" > "${{ matrix.service }}-image.txt"

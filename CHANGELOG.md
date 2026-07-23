@@ -5,6 +5,13 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-23
+
+### Fixed
+
+- Normalized GitHub owner names to lowercase before constructing container image
+  references for metadata inspection, provenance, digest, and SBOM export.
+
 ## [0.1.2] - 2026-07-23
 
 ### Fixed
@@ -49,7 +56,8 @@ see [VERSIONING.md](VERSIONING.md).
   defenses, redacted diagnostics, dependency/secret/container scans, and
   authenticated administration surfaces.
 
-[Unreleased]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Milkman3407/Mirth-Spool/releases/tag/v0.1.0
