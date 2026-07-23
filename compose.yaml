@@ -178,6 +178,32 @@ services:
     volumes:
       - media-cache:/var/lib/mirthspool/media
 
+  migrate:
+    profiles: [tools]
+    image: mirthspool-worker:local
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    command:
+      ["node", "node_modules/@mirthspool/db/dist/migrate.js", "/app/migrations"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://mirthspool:${MIRTHSPOOL_DATABASE_PASSWORD:?set MIRTHSPOOL_DATABASE_PASSWORD in .env}@postgres:5432/mirthspool
+    init: true
+    cpus: 1.0
+    mem_limit: 768m
+    pids_limit: 128
+    networks:
+      - backend
+    read_only: true
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000,mode=1777
+
 networks:
   backend:
     internal: true
