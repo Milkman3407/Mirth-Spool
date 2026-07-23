@@ -20,7 +20,7 @@ export async function GET(request: Request): Promise<Response> {
       getSearchServices(),
       authentication.session.user.id,
       request.url,
-      { allowHidden: authentication.session.user.role === "ADMIN" },
+      { allowHidden: true },
     );
     console.log(
       JSON.stringify({

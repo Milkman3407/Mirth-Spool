@@ -6,6 +6,7 @@ import path from "node:path";
 import type { HttpTransport, TransportResponse } from "@mirthspool/connectors";
 import {
   createDatabaseClient,
+  writeUserPreferences,
   writeSetting,
   type DatabaseClient,
 } from "@mirthspool/db";
@@ -34,6 +35,7 @@ describe.sequential("bounded media cache lifecycle", () => {
   let mediaId: string;
   let root: string;
   let storage: LocalFilesystemStorage;
+  let strictUserId: string;
   let userId: string;
 
   beforeAll(async () => {
@@ -44,7 +46,12 @@ describe.sequential("bounded media cache lifecycle", () => {
     await database.mediaAsset.deleteMany();
     await database.contentItem.deleteMany();
     await database.appSetting.deleteMany({
-      where: { key: { startsWith: "cache." } },
+      where: {
+        OR: [
+          { key: { startsWith: "cache." } },
+          { key: "content.maximumRating" },
+        ],
+      },
     });
     const email = `cache-${randomUUID()}@example.test`;
     userId = (
@@ -54,6 +61,18 @@ describe.sequential("bounded media cache lifecycle", () => {
           emailNormalized: email,
           name: "Cache test administrator",
           role: "ADMIN",
+        },
+      })
+    ).id;
+    const strictEmail = `cache-strict-${randomUUID()}@example.test`;
+    strictUserId = (
+      await database.user.create({
+        data: {
+          email: strictEmail,
+          emailNormalized: strictEmail,
+          name: "Strict cache member",
+          preferences: { create: { maximumContentRating: "SAFE" } },
+          role: "MEMBER",
         },
       })
     ).id;
@@ -92,9 +111,16 @@ describe.sequential("bounded media cache lifecycle", () => {
     await database.mediaAsset.deleteMany();
     await database.contentItem.deleteMany();
     await database.appSetting.deleteMany({
-      where: { key: { startsWith: "cache." } },
+      where: {
+        OR: [
+          { key: { startsWith: "cache." } },
+          { key: "content.maximumRating" },
+        ],
+      },
     });
-    await database.user.delete({ where: { id: userId } });
+    await database.user.deleteMany({
+      where: { id: { in: [userId, strictUserId] } },
+    });
     await database.$disconnect();
     await rm(root, { force: true, recursive: true });
   });
@@ -147,6 +173,7 @@ describe.sequential("bounded media cache lifecycle", () => {
         method: "GET",
         now,
         range: null,
+        userId,
       },
     );
     expect(response?.status).toBe(200);
@@ -167,6 +194,7 @@ describe.sequential("bounded media cache lifecycle", () => {
         method: "GET",
         now,
         range: null,
+        userId,
       },
     );
     expect(notModified?.status).toBe(304);
@@ -178,7 +206,46 @@ describe.sequential("bounded media cache lifecycle", () => {
     await expect(
       openCachedMedia(
         { database, storage },
-        { ifNoneMatch: null, mediaId, method: "GET", now, range: null },
+        {
+          ifNoneMatch: null,
+          mediaId,
+          method: "GET",
+          now,
+          range: null,
+          userId,
+        },
+      ),
+    ).resolves.toBeNull();
+    await Promise.all([
+      writeSetting(database, "content.maximumRating", "ADULT"),
+      writeUserPreferences(database, userId, {
+        maximumContentRating: "ADULT",
+      }),
+    ]);
+    await expect(
+      openCachedMedia(
+        { database, storage },
+        {
+          ifNoneMatch: null,
+          mediaId,
+          method: "GET",
+          now,
+          range: null,
+          userId,
+        },
+      ),
+    ).resolves.toBeInstanceOf(Response);
+    await expect(
+      openCachedMedia(
+        { database, storage },
+        {
+          ifNoneMatch: null,
+          mediaId,
+          method: "GET",
+          now,
+          range: null,
+          userId: strictUserId,
+        },
       ),
     ).resolves.toBeNull();
   });
@@ -292,6 +359,7 @@ describe.sequential("bounded media cache lifecycle", () => {
         method: "HEAD",
         now,
         range: null,
+        userId,
       },
     );
     expect(head?.status).toBe(200);
@@ -304,6 +372,7 @@ describe.sequential("bounded media cache lifecycle", () => {
         method: "GET",
         now,
         range: "bytes=4-7",
+        userId,
       },
     );
     expect(range?.status).toBe(206);

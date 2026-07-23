@@ -1,5 +1,9 @@
 # Authentication and account recovery
 
+Invitation-only member accounts, role authorization, deletion semantics, and
+shared-device privacy are documented in
+[Multi-user authorization and privacy](MULTIUSER_AUTHORIZATION_AND_PRIVACY.md).
+
 MirthSpool M03 uses database-backed, revocable sessions and email/password
 credentials. Passwords are hashed with Argon2id (64 MiB memory, three passes,
 one lane). Self-registration, password-reset email, OAuth, and API tokens are

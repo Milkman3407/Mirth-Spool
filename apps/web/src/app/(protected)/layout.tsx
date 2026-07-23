@@ -31,7 +31,7 @@ export default async function ProtectedLayout({
         <Link className="brand" href="/">
           Mirth<span className="brand-mark">Spool</span>
         </Link>
-        <PrimaryNavigation />
+        <PrimaryNavigation role={session.user.role} />
         <div className="account-nav">
           <span title={session.user.email}>{session.user.name}</span>
           <LogoutButton />

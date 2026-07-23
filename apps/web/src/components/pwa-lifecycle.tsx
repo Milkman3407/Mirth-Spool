@@ -137,9 +137,12 @@ export function PwaLifecycle() {
 }
 
 export async function clearOriginCaches(): Promise<void> {
-  if (!("caches" in window)) return;
-  const keys = await window.caches.keys();
-  await Promise.all(keys.map((key) => window.caches.delete(key)));
+  window.sessionStorage.clear();
+  window.localStorage.clear();
+  if ("caches" in window) {
+    const keys = await window.caches.keys();
+    await Promise.all(keys.map((key) => window.caches.delete(key)));
+  }
 }
 
 function sendWorkerMessage(worker: ServiceWorker, type: string) {

@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { getAuthenticatedSession } from "../../../lib/auth/session";
 
 export const metadata: Metadata = { title: "Status" };
 
-export default function StatusPlaceholderPage() {
+export default async function StatusPlaceholderPage() {
+  const authentication = await getAuthenticatedSession(await headers());
+  if (!authentication || authentication.user.role !== "ADMIN") redirect("/");
   return (
     <>
       <p className="eyebrow">Process topology</p>

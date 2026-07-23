@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { readUserPreferences } from "../../../../../packages/db/dist/index";
 
 import { FeedExperience } from "../../components/feed-experience";
 import { FeedFilters } from "../../components/feed-filters";
@@ -24,8 +25,19 @@ export default async function FeedPage({
 }: Readonly<{ searchParams: Promise<SearchParameters> }>) {
   const authentication = await getAuthenticatedSession(await headers());
   if (!authentication) redirect("/login");
-  const parameters = await searchParams;
+  const suppliedParameters = await searchParams;
   const services = getFeedServices();
+  const preferences = await readUserPreferences(
+    services.database,
+    authentication.user.id,
+  );
+  const parameters =
+    suppliedParameters.mode === undefined
+      ? {
+          ...suppliedParameters,
+          mode: preferences.defaultFeedMode,
+        }
+      : suppliedParameters;
   const sourceRows = await services.database.source.findMany({
     orderBy: [{ displayName: "asc" }, { id: "asc" }],
     select: { displayName: true, id: true },

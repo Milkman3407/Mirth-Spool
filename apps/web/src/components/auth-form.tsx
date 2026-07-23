@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { clearOriginCaches } from "./pwa-lifecycle";
 
 type Mode = "login" | "setup";
 
@@ -27,6 +28,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       },
     );
     if (response.ok) {
+      await clearOriginCaches().catch(() => undefined);
       window.location.assign("/");
       return;
     }

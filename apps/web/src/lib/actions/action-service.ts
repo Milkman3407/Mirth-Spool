@@ -1,10 +1,10 @@
 import {
-  readSetting,
+  readUserPreferences,
   readUserActionState,
   recordMeaningfulView,
   removeUserAction,
   setUserAction,
-  writeSetting,
+  writeUserPreferences,
 } from "../../../../../packages/db/dist/index";
 
 export class ActionContentNotFoundError extends Error {
@@ -15,7 +15,7 @@ export class ActionContentNotFoundError extends Error {
 }
 
 export type ActionServices = Readonly<{
-  database: Parameters<typeof readSetting>[0] &
+  database: Parameters<typeof readUserPreferences>[0] &
     Parameters<typeof recordMeaningfulView>[0];
 }>;
 
@@ -41,9 +41,9 @@ export async function recordContentView(
   contentItemId: string,
 ) {
   await requireRetainedContent(services, contentItemId);
-  const historyEnabled = await readSetting(
+  const { historyEnabled } = await readUserPreferences(
     services.database,
-    "history.enabled",
+    userId,
   );
   if (historyEnabled) {
     await recordMeaningfulView(services.database, { contentItemId, userId });
@@ -65,7 +65,9 @@ export async function readContentActionState(
   const [rows, historyEnabled] = await Promise.all([
     readUserActionState(services.database, { contentItemId, userId }),
     knownHistoryEnabled === undefined
-      ? readSetting(services.database, "history.enabled")
+      ? readUserPreferences(services.database, userId).then(
+          (preferences) => preferences.historyEnabled,
+        )
       : Promise.resolve(knownHistoryEnabled),
   ]);
   const favorite = rows.find((row) => row.kind === "FAVORITE");
@@ -87,8 +89,13 @@ export async function readContentActionState(
   });
 }
 
-export async function readHistorySetting(services: ActionServices) {
-  return readSetting(services.database, "history.enabled");
+export async function readHistorySetting(
+  services: ActionServices,
+  userId: string,
+) {
+  return readUserPreferences(services.database, userId).then(
+    (preferences) => preferences.historyEnabled,
+  );
 }
 
 export async function updateHistorySetting(
@@ -97,7 +104,9 @@ export async function updateHistorySetting(
   enabled: boolean,
 ) {
   await services.database.$transaction(async (transaction) => {
-    await writeSetting(transaction, "history.enabled", enabled);
+    await writeUserPreferences(transaction, userId, {
+      historyEnabled: enabled,
+    });
     if (!enabled) {
       await transaction.userAction.deleteMany({
         where: { kind: "VIEW", userId },
