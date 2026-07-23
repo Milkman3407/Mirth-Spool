@@ -12,4 +12,4 @@ Follow [AGENTS.md](mirthspool-codex-plan/AGENTS.md) and the [delivery workflow](
 - Do not add manual meme-upload functionality or undocumented provider scraping.
 - Run the root quality commands before requesting review.
 
-The source license remains undecided; see [LICENSE.md](LICENSE.md).
+Contributions are accepted under the [Apache License 2.0](LICENSE).
