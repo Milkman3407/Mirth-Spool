@@ -6,6 +6,8 @@ source payloads, and credentials used by automated checks are synthetic.
 ## Source and artifact checks
 
 - Root version/tag: `0.1.0` / `v0.1.0`.
+- Owner-approved license: Apache-2.0, recorded consistently in the repository,
+  package metadata, and OCI image labels.
 - Supported and tested release platform: `linux/amd64`.
 - Images: GHCR web and worker semantic tags plus commit-derived tags and digest
   files; exact published digests are attached by CI at tag time.

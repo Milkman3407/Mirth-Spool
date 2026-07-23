@@ -35,7 +35,7 @@ LABEL org.opencontainers.image.title="MirthSpool web" \
       org.opencontainers.image.source="https://github.com/Milkman3407/Mirth-Spool" \
       org.opencontainers.image.version=$BUILD_VERSION \
       org.opencontainers.image.revision=$BUILD_REVISION \
-      org.opencontainers.image.licenses="NOASSERTION"
+      org.opencontainers.image.licenses="Apache-2.0"
 
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
