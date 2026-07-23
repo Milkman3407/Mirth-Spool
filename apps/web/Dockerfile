@@ -28,6 +28,15 @@ RUN pnpm build
 
 FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
 
+ARG BUILD_VERSION=0.0.0-dev
+ARG BUILD_REVISION=unknown
+LABEL org.opencontainers.image.title="MirthSpool web" \
+      org.opencontainers.image.description="Private self-hosted content aggregator web service" \
+      org.opencontainers.image.source="https://github.com/Milkman3407/Mirth-Spool" \
+      org.opencontainers.image.version=$BUILD_VERSION \
+      org.opencontainers.image.revision=$BUILD_REVISION \
+      org.opencontainers.image.licenses="NOASSERTION"
+
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production

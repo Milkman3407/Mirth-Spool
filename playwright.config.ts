@@ -22,7 +22,8 @@ export default defineConfig({
   reporter: "line",
   retries: 0,
   testDir: "./tests/e2e",
-  timeout: 30_000,
+  timeout:
+    process.env.MIRTHSPOOL_E2E_RELEASE_IMAGES === "true" ? 60_000 : 30_000,
   projects: [
     { name: "chromium", use: { browserName: "chromium" } },
     ...crossBrowserProjects,

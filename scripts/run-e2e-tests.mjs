@@ -2,12 +2,14 @@ import { spawnSync } from "node:child_process";
 import console from "node:console";
 import process from "node:process";
 
+const useReleaseImages = process.env.MIRTHSPOOL_E2E_RELEASE_IMAGES === "true";
 const composeArguments = [
   "compose",
   "-f",
   "compose.yaml",
   "-f",
   "compose.e2e.yaml",
+  ...(useReleaseImages ? ["-f", "compose.release.yaml"] : []),
 ];
 const environment = {
   ...process.env,
@@ -51,7 +53,7 @@ try {
   run("docker", [
     ...composeArguments,
     "up",
-    "--build",
+    ...(useReleaseImages ? [] : ["--build"]),
     "--detach",
     "--wait",
     "web",
