@@ -124,6 +124,38 @@ model User {
   credentialAccounts CredentialAccount[]
   actions            UserAction[]
   auditEvents        AuditEvent[]        @relation("AuditActor")
+  preferences        UserPreference?
+  createdInvitations Invitation[]        @relation("InvitationCreator")
+  acceptedInvitation Invitation?         @relation("InvitationAcceptedUser")
+}
+
+model Invitation {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String
+  emailNormalized String
+  tokenHash      String    @unique
+  expiresAt      DateTime  @db.Timestamptz(3)
+  createdByUserId String   @db.Uuid
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  revokedAt      DateTime? @db.Timestamptz(3)
+  acceptedAt     DateTime? @db.Timestamptz(3)
+  acceptedUserId String?   @unique @db.Uuid
+  createdBy      User      @relation("InvitationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  acceptedUser   User?     @relation("InvitationAcceptedUser", fields: [acceptedUserId], references: [id], onDelete: SetNull)
+
+  @@index([emailNormalized, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@index([createdByUserId, createdAt(sort: Desc)])
+}
+
+model UserPreference {
+  userId               String        @id @db.Uuid
+  historyEnabled       Boolean       @default(true)
+  maximumContentRating ContentRating @default(SAFE)
+  defaultFeedMode      String        @default("new")
+  createdAt            DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime      @updatedAt @db.Timestamptz(3)
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Session {

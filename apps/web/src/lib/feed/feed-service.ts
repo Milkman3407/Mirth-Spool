@@ -4,6 +4,7 @@ import {
   queryFeed,
   randomSeedPivot,
   readSetting,
+  readUserPreferences,
   type ContentRating,
   type FeedQuery,
 } from "../../../../../packages/db/dist/index";
@@ -27,11 +28,16 @@ export async function readFeed(
   now = new Date(),
 ) {
   const query = parseFeedQuery(url);
-  const [ceiling, historyEnabled] = await Promise.all([
+  const [ceiling, preferences] = await Promise.all([
     readSetting(services.database, "content.maximumRating"),
-    readSetting(services.database, "history.enabled"),
+    readUserPreferences(services.database, userId),
   ]);
-  const allowedRatings = ratingsFor(ceiling, query.rating);
+  const historyEnabled = preferences.historyEnabled;
+  const allowedRatings = ratingsFor(
+    ceiling,
+    query.rating,
+    preferences.maximumContentRating,
+  );
   const cursor = query.cursor
     ? decodeFeedCursor(query.cursor, services.secret)
     : undefined;
@@ -135,23 +141,30 @@ export async function readContent(
   userId: string,
   contentId: string,
 ) {
-  const [ceiling, historyEnabled] = await Promise.all([
+  const [ceiling, preferences] = await Promise.all([
     readSetting(services.database, "content.maximumRating"),
-    readSetting(services.database, "history.enabled"),
+    readUserPreferences(services.database, userId),
   ]);
   const row = await getFeedContent(services.database, {
-    allowedRatings: [...ratingsFor(ceiling)],
+    allowedRatings: [
+      ...ratingsFor(ceiling, undefined, preferences.maximumContentRating),
+    ],
     contentId,
     userId,
   });
-  return row ? presentDetail(row, historyEnabled) : null;
+  return row ? presentDetail(row, preferences.historyEnabled) : null;
 }
 
 export function ratingsFor(
   ceiling: string,
   requested?: string,
+  userCeiling = ceiling,
 ): readonly ContentRating[] {
-  const maximum = { SAFE: 0, SENSITIVE: 1, ADULT: 2, UNKNOWN: 3 }[ceiling] ?? 0;
+  const levels = { SAFE: 0, SENSITIVE: 1, ADULT: 2, UNKNOWN: 3 } as const;
+  const maximum = Math.min(
+    levels[ceiling as keyof typeof levels] ?? 0,
+    levels[userCeiling as keyof typeof levels] ?? 0,
+  );
   const requestedMaximum =
     requested === "safe"
       ? 0

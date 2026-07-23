@@ -7,22 +7,33 @@ const primary = [
   { href: "/", label: "Feed" },
   { href: "/search", label: "Search" },
   { href: "/library/favorites", label: "Favorites" },
-  { href: "/sources", label: "Sources" },
 ] as const;
 
 const secondary = [
   { href: "/library/hidden", label: "Hidden" },
   { href: "/library/history", label: "History" },
-  { href: "/duplicates", label: "Duplicates" },
   { href: "/settings", label: "Settings" },
-  { href: "/status", label: "Status" },
   { href: "/account/security", label: "Security" },
 ] as const;
 
-const all = [...primary, ...secondary] as const;
+const administration = [
+  { href: "/sources", label: "Sources" },
+  { href: "/duplicates", label: "Duplicates" },
+  { href: "/members", label: "Members" },
+  { href: "/status", label: "Status" },
+] as const;
 
-export function PrimaryNavigation() {
+export function PrimaryNavigation({
+  role,
+}: {
+  readonly role: "ADMIN" | "MEMBER";
+}) {
   const pathname = usePathname();
+  const visiblePrimary =
+    role === "ADMIN" ? [...primary, administration[0]] : primary;
+  const visibleSecondary =
+    role === "ADMIN" ? [...secondary, ...administration.slice(1)] : secondary;
+  const all = [...visiblePrimary, ...visibleSecondary];
   return (
     <>
       <nav aria-label="Primary navigation" className="primary-nav desktop-nav">
@@ -34,14 +45,14 @@ export function PrimaryNavigation() {
       </nav>
       <nav aria-label="Mobile navigation" className="mobile-nav">
         <ul>
-          {primary.map((item) => (
+          {visiblePrimary.map((item) => (
             <NavigationLink item={item} key={item.href} pathname={pathname} />
           ))}
           <li>
             <details className="mobile-more">
               <summary>More</summary>
               <ul>
-                {secondary.map((item) => (
+                {visibleSecondary.map((item) => (
                   <NavigationLink
                     item={item}
                     key={item.href}

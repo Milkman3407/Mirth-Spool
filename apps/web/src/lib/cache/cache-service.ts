@@ -2,6 +2,7 @@ import {
   getCacheSummary,
   getMediaForDelivery,
   readSetting,
+  readUserPreferences,
   touchMediaAccess,
   type DatabaseClient,
   writeSetting,
@@ -99,11 +100,17 @@ export async function openCachedMedia(
     readonly method: "GET" | "HEAD";
     readonly now: Date;
     readonly range: string | null;
+    readonly userId: string;
   },
 ): Promise<Response | null> {
-  const ceiling = await readSetting(services.database, "content.maximumRating");
+  const [ceiling, preferences] = await Promise.all([
+    readSetting(services.database, "content.maximumRating"),
+    readUserPreferences(services.database, input.userId),
+  ]);
   const media = await getMediaForDelivery(services.database, {
-    allowedRatings: [...ratingsFor(ceiling)],
+    allowedRatings: [
+      ...ratingsFor(ceiling, undefined, preferences.maximumContentRating),
+    ],
     mediaId: input.mediaId,
   });
   if (!media?.storageKey || !media.mimeType || !media.sha256) return null;
