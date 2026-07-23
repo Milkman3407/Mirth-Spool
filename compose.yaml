@@ -20,7 +20,7 @@ services:
     tmpfs:
       - /run/postgresql:uid=70,gid=70,mode=0770
       - /tmp:mode=1777
-    cpus: 6.0
+    cpus: 4.0
     mem_limit: 4g
     pids_limit: 256
     stop_grace_period: 30s
