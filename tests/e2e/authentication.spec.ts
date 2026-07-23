@@ -88,7 +88,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page
       .getByLabel("Feed URL")
       .first()
-      .fill("http://fixture-feed:8080/controlled.xml");
+      .fill("http://fixture-failure:8080/controlled.xml");
     await page.getByRole("button", { name: "Add source" }).click();
     let failingSource = page
       .locator("article.source-card")
@@ -138,7 +138,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(
       page.getByRole("heading", { name: "Fresh from your sources." }),
     ).toBeVisible();
-    await expect(page.getByText("Deterministic fixture image")).toBeVisible();
+    await expect(page.getByText("Deterministic animated image")).toBeVisible();
     await expect(
       page.getByText("Sensitive fixture should obey the rating ceiling"),
     ).toHaveCount(0);
@@ -333,7 +333,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.goto("/");
     let target = page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" });
+      .filter({ hasText: "Deterministic animated image" });
     await expect(target).toBeVisible();
 
     await target.getByRole("button", { name: "Add to favorites" }).click();
@@ -351,7 +351,7 @@ test.describe.serial("private setup, sources, and feed", () => {
           if (!response.ok()) return undefined;
           const feed = feedPageSchema.parse(await response.json());
           return feed.items.find(
-            (item) => item.title === "Deterministic fixture image",
+            (item) => item.title === "Deterministic animated image",
           )?.media?.cacheState;
         },
         { intervals: [5_000], timeout: 60_000 },
@@ -360,11 +360,11 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.reload();
     target = page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" });
+      .filter({ hasText: "Deterministic animated image" });
     await expect(target.getByText("Cached locally")).toBeVisible();
     target = page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" });
+      .filter({ hasText: "Deterministic animated image" });
     await expect(
       target.getByRole("button", { name: "Remove from favorites" }),
     ).toBeVisible();
@@ -374,11 +374,11 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(
       page.getByRole("heading", { name: "Favorites" }),
     ).toBeVisible();
-    await expect(page.getByText("Deterministic fixture image")).toBeVisible();
+    await expect(page.getByText("Deterministic animated image")).toBeVisible();
     await page.reload();
     await page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" })
+      .filter({ hasText: "Deterministic animated image" })
       .getByRole("button", { name: "Remove from favorites" })
       .click();
     await expect(
@@ -388,7 +388,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.goto("/");
     target = page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" });
+      .filter({ hasText: "Deterministic animated image" });
     await page.route("**/api/content/*/favorite", async (route) => {
       if (route.request().method() === "PUT") {
         await route.fulfill({
@@ -412,7 +412,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.getByRole("button", { name: "Undo hide" }).click();
     target = page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" });
+      .filter({ hasText: "Deterministic animated image" });
     await expect(target).toBeVisible();
     await target.getByRole("button", { name: "Hide item" }).click();
     await expect(target).toHaveCount(0);
@@ -421,11 +421,11 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(
       page.getByRole("heading", { name: "Hidden items" }),
     ).toBeVisible();
-    await expect(page.getByText("Deterministic fixture image")).toBeVisible();
+    await expect(page.getByText("Deterministic animated image")).toBeVisible();
     await page.reload();
     await page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" })
+      .filter({ hasText: "Deterministic animated image" })
       .getByRole("button", { name: "Unhide item" })
       .click();
     await expect(
@@ -434,7 +434,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.goto("/");
     target = page
       .locator("article.feed-card")
-      .filter({ hasText: "Deterministic fixture image" });
+      .filter({ hasText: "Deterministic animated image" });
     await expect(target).toBeVisible();
 
     await target.getByRole("link", { name: "View details" }).click();
@@ -443,7 +443,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(
       page.getByRole("heading", { name: "View history" }),
     ).toBeVisible();
-    await expect(page.getByText("Deterministic fixture image")).toBeVisible();
+    await expect(page.getByText("Deterministic animated image")).toBeVisible();
 
     await page.goto("/settings");
     await expectAccessible(page);
