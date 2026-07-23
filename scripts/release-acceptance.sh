@@ -7,6 +7,8 @@ readonly http_port="${MIRTHSPOOL_ACCEPTANCE_HTTP_PORT:-53170}"
 readonly web_image="${MIRTHSPOOL_WEB_IMAGE:-mirthspool-web:release-acceptance}"
 readonly worker_image="${MIRTHSPOOL_WORKER_IMAGE:-mirthspool-worker:release-acceptance}"
 readonly compose_files=(-f compose.yaml -f compose.release.yaml)
+readonly build_version="${BUILD_VERSION:-$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")}"
+readonly build_revision="${BUILD_REVISION:-acceptance}"
 
 export APP_ENCRYPTION_KEY="${APP_ENCRYPTION_KEY:-bWlydGhzcG9vbC1yZWxlYXNlLXRlc3Qta2V5LTAwMDE=}"
 export COMPOSE_PROJECT_NAME="$project_name"
@@ -30,9 +32,9 @@ cd "$root_dir"
 cleanup
 
 if [[ "${MIRTHSPOOL_ACCEPTANCE_SKIP_BUILD:-false}" != "true" ]]; then
-  docker build --build-arg BUILD_VERSION=0.1.0 --build-arg BUILD_REVISION=acceptance \
+  docker build --build-arg BUILD_VERSION="$build_version" --build-arg BUILD_REVISION="$build_revision" \
     --tag "$web_image" --file apps/web/Dockerfile .
-  docker build --build-arg BUILD_VERSION=0.1.0 --build-arg BUILD_REVISION=acceptance \
+  docker build --build-arg BUILD_VERSION="$build_version" --build-arg BUILD_REVISION="$build_revision" \
     --tag "$worker_image" --file apps/worker/Dockerfile .
 fi
 
