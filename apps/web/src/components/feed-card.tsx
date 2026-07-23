@@ -125,6 +125,16 @@ export function FeedCard({
           decay
         </p>
       ) : null}
+      {item.recommendation ? (
+        <details className="ranking-note">
+          <summary>Why this item?</summary>
+          <ul>
+            {item.recommendation.explanations.map((explanation) => (
+              <li key={explanation.factor}>{explanation.label}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {item.duplicateGroup ? (
         <p className="duplicate-note">
           Grouped duplicate · {item.duplicateGroup.itemCount} preserved

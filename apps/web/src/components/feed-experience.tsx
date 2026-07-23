@@ -151,6 +151,17 @@ export function FeedExperience({
 
   return (
     <section aria-label="Content feed">
+      {initialPage.personalization ? (
+        <p className="ranking-note" role="status">
+          {initialPage.personalization.reason === "personalized"
+            ? "For you is personalized from your on-server activity."
+            : initialPage.personalization.reason === "disabled"
+              ? "Personalization is disabled; showing a safe newest-first fallback."
+              : initialPage.personalization.reason === "stale"
+                ? "Your profile is being refreshed; showing a safe newest-first fallback."
+                : "Use favorites and hides to personalize this feed; showing newest items for now."}
+        </p>
+      ) : null}
       {actionNotice ? (
         <div
           className={

@@ -1,10 +1,16 @@
 import {
   explainHotRanking,
+  diversifyRecommendations,
   getFeedContent,
+  parseRecommendationFeatures,
   queryFeed,
+  queryRecommendationCandidates,
   randomSeedPivot,
+  RECOMMENDATION_SCORING_VERSION,
   readSetting,
   readUserPreferences,
+  recommendationProfileStatus,
+  scoreRecommendation,
   type ContentRating,
   type FeedQuery,
 } from "../../../../../packages/db/dist/index";
@@ -52,6 +58,122 @@ export async function readFeed(
       (query.seed && cursor.seed !== query.seed))
   )
     throw new Error("INVALID_CURSOR");
+  if (query.mode === "for-you") {
+    const snapshotAt = cursor?.a ? new Date(cursor.a) : now;
+    const [profile, weights] = await Promise.all([
+      services.database.recommendationProfile.findUnique({
+        where: { userId },
+      }),
+      readSetting(services.database, "recommendations.weights"),
+    ]);
+    const status = recommendationProfileStatus(
+      profile,
+      preferences.recommendationsEnabled,
+      now,
+    );
+    if (
+      cursor &&
+      (cursor.a === undefined ||
+        cursor.sv !== RECOMMENDATION_SCORING_VERSION ||
+        cursor.q !== profile?.computedAt.toISOString())
+    )
+      throw new Error("INVALID_CURSOR");
+    const candidates = await queryRecommendationCandidates(services.database, {
+      allowedRatings: [...allowedRatings],
+      ...(query.from ? { from: query.from } : {}),
+      includeSeen: query.includeSeen || !historyEnabled,
+      mediaKinds: query.kinds,
+      snapshotAt,
+      sourceIds: query.sourceIds,
+      tags: query.tags,
+      ...(query.to ? { to: query.to } : {}),
+      userId,
+    });
+    const features =
+      status === "personalized" && profile
+        ? parseRecommendationFeatures(profile.featuresJson)
+        : { media: {}, sources: {}, tags: {} };
+    const scored = candidates.map((row) => {
+      const scoredItem = scoreRecommendation(
+        {
+          id: row.id,
+          mediaKind: row.mediaAssets[0]?.kind ?? null,
+          publishedAt: row.publishedAt,
+          sourceId: row.primarySourcePost?.source.id ?? null,
+          sourcePriority: row.primarySourcePost?.source.priority ?? 0,
+          tagSlugs: row.tags.map((entry) => entry.tag.slug),
+        },
+        features,
+        weights,
+        snapshotAt,
+      );
+      return { row, ...scoredItem };
+    });
+    if (status === "personalized")
+      scored.sort(
+        (left, right) =>
+          right.score - left.score ||
+          right.row.publishedAt.valueOf() - left.row.publishedAt.valueOf() ||
+          right.row.id.localeCompare(left.row.id),
+      );
+    const diversified =
+      status === "personalized"
+        ? diversifyRecommendations(
+            scored.map((item) => ({
+              ...item,
+              id: item.row.id,
+              mediaKind: item.row.mediaAssets[0]?.kind ?? null,
+              publishedAt: item.row.publishedAt,
+              sourceId: item.row.primarySourcePost?.source.id ?? null,
+              sourcePriority: item.row.primarySourcePost?.source.priority ?? 0,
+              tagSlugs: item.row.tags.map((entry) => entry.tag.slug),
+            })),
+            scored.length,
+          )
+        : scored;
+    const start = cursor
+      ? diversified.findIndex((item) => item.row.id === cursor.i) + 1
+      : 0;
+    if (cursor && start === 0) throw new Error("INVALID_CURSOR");
+    const page = diversified.slice(start, start + query.limit);
+    const hasMore = start + query.limit < diversified.length;
+    const last = page.at(-1);
+    return Object.freeze({
+      hasMore,
+      items: page.map((item) => ({
+        ...presentFeedItem(item.row, snapshotAt, false, historyEnabled),
+        ...(status === "personalized"
+          ? {
+              recommendation: {
+                explanations: item.explanations,
+                score: item.score,
+                scoringVersion: RECOMMENDATION_SCORING_VERSION,
+              },
+            }
+          : {}),
+      })),
+      nextCursor:
+        hasMore && last
+          ? encodeFeedCursor(
+              {
+                a: snapshotAt.toISOString(),
+                f: query.fingerprint,
+                i: last.row.id,
+                m: "for-you",
+                q: profile?.computedAt.toISOString(),
+                sv: RECOMMENDATION_SCORING_VERSION,
+                v: 1,
+              },
+              services.secret,
+            )
+          : null,
+      personalization: {
+        reason: status,
+        scoringVersion: RECOMMENDATION_SCORING_VERSION,
+      },
+      seed: undefined,
+    });
+  }
   const position = cursor
     ? {
         id: cursor.i,
@@ -132,6 +254,7 @@ export async function readFeed(
       presentFeedItem(row, now, query.mode === "hot", historyEnabled),
     ),
     nextCursor,
+    personalization: undefined,
     ...(seed ? { seed } : {}),
   });
 }
@@ -218,6 +341,7 @@ export function presentFeedItem(
           sourceId: primary.source.id,
         }
       : null,
+    recommendation: undefined,
     ...(hot ? { ranking: explainHotRanking(row.rankingScore, now) } : {}),
   };
 }
