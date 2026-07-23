@@ -1,12 +1,12 @@
 services:
   web:
-    image: ${MIRTHSPOOL_WEB_IMAGE:-ghcr.io/milkman3407/mirth-spool-web:0.1.1}
+    image: ${MIRTHSPOOL_WEB_IMAGE:-ghcr.io/milkman3407/mirth-spool-web:0.1.2}
     build: null
 
   worker:
-    image: ${MIRTHSPOOL_WORKER_IMAGE:-ghcr.io/milkman3407/mirth-spool-worker:0.1.1}
+    image: ${MIRTHSPOOL_WORKER_IMAGE:-ghcr.io/milkman3407/mirth-spool-worker:0.1.2}
     build: null
 
   migrate:
-    image: ${MIRTHSPOOL_WORKER_IMAGE:-ghcr.io/milkman3407/mirth-spool-worker:0.1.1}
+    image: ${MIRTHSPOOL_WORKER_IMAGE:-ghcr.io/milkman3407/mirth-spool-worker:0.1.2}
     build: null
