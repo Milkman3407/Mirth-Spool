@@ -41,4 +41,13 @@ describe("release workflow browser-test prerequisites", () => {
       "http://fixture-failure:8080/controlled.xml",
     );
   });
+
+  it("normalizes mixed-case GitHub owners before Docker image inspection", () => {
+    expect(workflow).toContain("OWNER: ${{ github.repository_owner }}");
+    expect(workflow).toContain("${OWNER,,}");
+    expect(workflow).toContain("IMAGE: ${{ steps.image.outputs.repository }}");
+    expect(workflow).not.toContain(
+      "${{ github.repository_owner }}/mirth-spool-${{ matrix.service }}",
+    );
+  });
 });
