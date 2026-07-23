@@ -5,11 +5,14 @@ const payloadSchema = z
   .object({
     f: z.string().length(64),
     i: z.uuid(),
-    m: z.enum(["new", "hot", "random", "unseen"]),
+    m: z.enum(["new", "hot", "random", "unseen", "for-you"]),
+    a: z.string().datetime().optional(),
     p: z.string().datetime().optional(),
     r: z.number().int().min(0).max(0x7fffffff).optional(),
     s: z.number().finite().optional(),
     seed: z.string().min(1).max(128).optional(),
+    q: z.string().datetime().optional(),
+    sv: z.number().int().positive().optional(),
     v: z.literal(1),
     w: z.boolean().optional(),
   })

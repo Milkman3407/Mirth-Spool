@@ -125,6 +125,7 @@ model User {
   actions            UserAction[]
   auditEvents        AuditEvent[]        @relation("AuditActor")
   preferences        UserPreference?
+  recommendationProfile RecommendationProfile?
   createdInvitations Invitation[]        @relation("InvitationCreator")
   acceptedInvitation Invitation?         @relation("InvitationAcceptedUser")
 }
@@ -153,9 +154,27 @@ model UserPreference {
   historyEnabled       Boolean       @default(true)
   maximumContentRating ContentRating @default(SAFE)
   defaultFeedMode      String        @default("new")
+  recommendationsEnabled Boolean     @default(true)
+  recommendationResetAt DateTime?    @db.Timestamptz(3)
   createdAt            DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime      @updatedAt @db.Timestamptz(3)
   user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RecommendationProfile {
+  userId              String   @id @db.Uuid
+  scoringVersion      Int      @default(1)
+  computedAt          DateTime @db.Timestamptz(3)
+  lastActionAt        DateTime? @db.Timestamptz(3)
+  sampledActionCount  Int
+  explicitActionCount Int
+  truncated           Boolean  @default(false)
+  featuresJson        Json
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([computedAt])
 }
 
 model Session {

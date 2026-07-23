@@ -21,13 +21,15 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const authentication = await getAuthenticatedSession(await headers());
   if (!authentication) redirect("/login");
-  const [preferences, globalMaximumRating, cache] = await Promise.all([
-    readUserPreferences(getAuthServices().database, authentication.user.id),
-    readSetting(getAuthServices().database, "content.maximumRating"),
-    authentication.user.role === "ADMIN"
-      ? readCacheAdministration(getCacheServices())
-      : Promise.resolve(null),
-  ]);
+  const [preferences, globalMaximumRating, recommendationWeights, cache] =
+    await Promise.all([
+      readUserPreferences(getAuthServices().database, authentication.user.id),
+      readSetting(getAuthServices().database, "content.maximumRating"),
+      readSetting(getAuthServices().database, "recommendations.weights"),
+      authentication.user.role === "ADMIN"
+        ? readCacheAdministration(getCacheServices())
+        : Promise.resolve(null),
+    ]);
   return (
     <div className="settings-page">
       <p className="eyebrow">Preferences</p>
@@ -36,13 +38,22 @@ export default async function SettingsPage() {
       <ContentPreferences
         globalMaximumRating={globalMaximumRating}
         initialFeedMode={
-          preferences.defaultFeedMode as "new" | "hot" | "random" | "unseen"
+          preferences.defaultFeedMode as
+            | "new"
+            | "hot"
+            | "random"
+            | "unseen"
+            | "for-you"
         }
         initialMaximumRating={preferences.maximumContentRating}
+        initialRecommendationsEnabled={preferences.recommendationsEnabled}
       />
       {authentication.user.role === "ADMIN" ? (
         <>
-          <GlobalPolicySettings initialMaximumRating={globalMaximumRating} />
+          <GlobalPolicySettings
+            initialMaximumRating={globalMaximumRating}
+            initialRecommendationWeights={recommendationWeights}
+          />
           {cache ? <CacheSettings initial={cache} /> : null}
         </>
       ) : null}

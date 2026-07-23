@@ -10,19 +10,35 @@ import { readBoundedJson } from "../../../../lib/bounded-json";
 
 const schema = z
   .object({
-    maximumContentRating: z.enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"]),
+    maximumContentRating: z
+      .enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"])
+      .optional(),
+    recommendationWeights: z
+      .object({
+        favorite: z.number(),
+        freshness: z.number(),
+        hide: z.number(),
+        media: z.number(),
+        source: z.number(),
+        sourcePriority: z.number(),
+        tag: z.number(),
+        view: z.number(),
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => Object.keys(value).length > 0);
 
 export async function GET(request: Request): Promise<Response> {
   const authentication = await requireAdminApiSession(request);
   if ("response" in authentication) return authentication.response;
-  const maximumContentRating = await readSetting(
-    getAuthServices().database,
-    "content.maximumRating",
-  );
+  const [maximumContentRating, recommendationWeights] = await Promise.all([
+    readSetting(getAuthServices().database, "content.maximumRating"),
+    readSetting(getAuthServices().database, "recommendations.weights"),
+  ]);
   return apiJson(
-    { settings: { maximumContentRating } },
+    { settings: { maximumContentRating, recommendationWeights } },
     { requestId: authentication.requestId },
   );
 }
@@ -38,7 +54,7 @@ export async function PATCH(request: Request): Promise<Response> {
     });
   }
   const bounded = await readBoundedJson(request, {
-    maxBytes: 256,
+    maxBytes: 2_048,
     requestId: authentication.requestId,
   });
   if ("response" in bounded) return bounded.response;
@@ -50,16 +66,23 @@ export async function PATCH(request: Request): Promise<Response> {
     });
   }
   await services.database.$transaction(async (transaction) => {
-    await writeSetting(
-      transaction,
-      "content.maximumRating",
-      body.data.maximumContentRating,
-    );
+    if (body.data.maximumContentRating)
+      await writeSetting(
+        transaction,
+        "content.maximumRating",
+        body.data.maximumContentRating,
+      );
+    if (body.data.recommendationWeights)
+      await writeSetting(
+        transaction,
+        "recommendations.weights",
+        body.data.recommendationWeights,
+      );
     await recordAuditEvent(transaction, {
       actorUserId: authentication.session.user.id,
       eventType: "GLOBAL_CONTENT_POLICY_UPDATED",
       metadata: {
-        maximumContentRating: body.data.maximumContentRating,
+        changedKeys: Object.keys(body.data).sort().join(","),
       },
       targetType: "AppSetting",
     });

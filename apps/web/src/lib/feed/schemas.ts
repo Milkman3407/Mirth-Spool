@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-const modes = ["new", "hot", "random", "unseen"] as const;
+const modes = ["new", "hot", "random", "unseen", "for-you"] as const;
 const mediaKinds = ["IMAGE", "ANIMATED_IMAGE", "VIDEO", "LINK"] as const;
 const allowedKeys = new Set([
   "mode",

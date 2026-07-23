@@ -48,6 +48,34 @@ export async function queryFeed(client: PrismaClient, input: FeedQuery) {
   });
 }
 
+export async function queryRecommendationCandidates(
+  client: PrismaClient,
+  input: Omit<FeedQuery, "limit" | "mode" | "position"> & {
+    readonly candidateLimit?: number;
+    readonly snapshotAt: Date;
+  },
+) {
+  const candidateLimit = z
+    .number()
+    .int()
+    .min(50)
+    .max(500)
+    .parse(input.candidateLimit ?? 500);
+  z.uuid().parse(input.userId);
+  const rows = await client.contentItem.findMany({
+    include: contentPresentationInclude(input.userId),
+    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    take: candidateLimit,
+    where: feedWhere({
+      ...input,
+      limit: 50,
+      mode: "new",
+      to: input.to && input.to < input.snapshotAt ? input.to : input.snapshotAt,
+    }),
+  });
+  return Object.freeze(rows);
+}
+
 export function getFeedContent(
   client: PrismaClient,
   input: {

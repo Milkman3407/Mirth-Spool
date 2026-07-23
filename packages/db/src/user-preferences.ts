@@ -4,11 +4,14 @@ import type { ContentRating, Prisma } from "./generated/prisma/client.js";
 
 const preferenceUpdateSchema = z
   .object({
-    defaultFeedMode: z.enum(["new", "hot", "random", "unseen"]).optional(),
+    defaultFeedMode: z
+      .enum(["new", "hot", "random", "unseen", "for-you"])
+      .optional(),
     historyEnabled: z.boolean().optional(),
     maximumContentRating: z
       .enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"])
       .optional(),
+    recommendationsEnabled: z.boolean().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);
@@ -26,6 +29,8 @@ export async function readUserPreferences(
     historyEnabled: stored?.historyEnabled ?? true,
     maximumContentRating: (stored?.maximumContentRating ??
       "SAFE") as ContentRating,
+    recommendationsEnabled: stored?.recommendationsEnabled ?? true,
+    recommendationResetAt: stored?.recommendationResetAt ?? null,
   });
 }
 
@@ -50,6 +55,13 @@ export async function writeUserPreferences(
     create.maximumContentRating = parsed.maximumContentRating;
     data.maximumContentRating = parsed.maximumContentRating;
   }
+  if (parsed.recommendationsEnabled !== undefined) {
+    create.recommendationsEnabled = parsed.recommendationsEnabled;
+    data.recommendationsEnabled = parsed.recommendationsEnabled;
+    if (!parsed.recommendationsEnabled) {
+      data.defaultFeedMode = "new";
+    }
+  }
   const stored = await client.userPreference.upsert({
     create,
     update: data,
@@ -59,5 +71,7 @@ export async function writeUserPreferences(
     defaultFeedMode: stored.defaultFeedMode,
     historyEnabled: stored.historyEnabled,
     maximumContentRating: stored.maximumContentRating,
+    recommendationsEnabled: stored.recommendationsEnabled,
+    recommendationResetAt: stored.recommendationResetAt,
   });
 }

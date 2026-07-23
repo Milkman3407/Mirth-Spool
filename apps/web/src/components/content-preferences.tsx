@@ -3,24 +3,30 @@
 import { useState } from "react";
 
 type Rating = "SAFE" | "SENSITIVE" | "ADULT" | "UNKNOWN";
-type FeedMode = "new" | "hot" | "random" | "unseen";
+type FeedMode = "new" | "hot" | "random" | "unseen" | "for-you";
 
 export function ContentPreferences({
   globalMaximumRating,
   initialFeedMode,
   initialMaximumRating,
+  initialRecommendationsEnabled,
 }: {
   readonly globalMaximumRating: Rating;
   readonly initialFeedMode: FeedMode;
   readonly initialMaximumRating: Rating;
+  readonly initialRecommendationsEnabled: boolean;
 }) {
   const [feedMode, setFeedMode] = useState(initialFeedMode);
   const [maximumRating, setMaximumRating] = useState(initialMaximumRating);
   const [message, setMessage] = useState<string | null>(null);
+  const [recommendationsEnabled, setRecommendationsEnabled] = useState(
+    initialRecommendationsEnabled,
+  );
 
   async function save(next: {
     readonly defaultFeedMode?: FeedMode;
     readonly maximumContentRating?: Rating;
+    readonly recommendationsEnabled?: boolean;
   }) {
     setMessage("Saving preferences…");
     const response = await fetch("/api/settings", {
@@ -75,8 +81,47 @@ export function ContentPreferences({
           <option value="hot">Hot</option>
           <option value="random">Random</option>
           <option value="unseen">Unseen</option>
+          <option value="for-you">For you</option>
         </select>
       </label>
+      <label className="checkbox-label">
+        <input
+          checked={recommendationsEnabled}
+          onChange={(event) => {
+            const enabled = event.currentTarget.checked;
+            setRecommendationsEnabled(enabled);
+            if (!enabled && feedMode === "for-you") setFeedMode("new");
+            void save({ recommendationsEnabled: enabled });
+          }}
+          type="checkbox"
+        />
+        Use my activity to personalize the For you feed
+      </label>
+      <button
+        className="secondary-button"
+        disabled={!recommendationsEnabled}
+        onClick={() => {
+          setMessage("Resetting recommendations…");
+          void fetch("/api/settings/recommendations/reset", {
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }).then((response) =>
+            setMessage(
+              response.ok
+                ? "Recommendations reset. Favorites and history were kept."
+                : "Recommendations could not be reset.",
+            ),
+          );
+        }}
+        type="button"
+      >
+        Reset recommendation profile
+      </button>
+      <p>
+        Personalization stays on this server. Resetting removes the derived
+        profile; it does not remove favorites, hides, or history.
+      </p>
       {message ? <p aria-live="polite">{message}</p> : null}
     </section>
   );

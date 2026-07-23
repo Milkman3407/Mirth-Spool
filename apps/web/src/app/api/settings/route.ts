@@ -15,11 +15,14 @@ import { readBoundedJson } from "../../../lib/bounded-json";
 
 const updateSchema = z
   .object({
-    defaultFeedMode: z.enum(["new", "hot", "random", "unseen"]).optional(),
+    defaultFeedMode: z
+      .enum(["new", "hot", "random", "unseen", "for-you"])
+      .optional(),
     historyEnabled: z.boolean().optional(),
     maximumContentRating: z
       .enum(["SAFE", "SENSITIVE", "ADULT", "UNKNOWN"])
       .optional(),
+    recommendationsEnabled: z.boolean().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);
@@ -79,6 +82,11 @@ export async function PATCH(request: Request): Promise<Response> {
               kind: "VIEW",
               userId: authentication.session.user.id,
             },
+          });
+        }
+        if (body.data.recommendationsEnabled === false) {
+          await transaction.recommendationProfile.deleteMany({
+            where: { userId: authentication.session.user.id },
           });
         }
         return updated;
