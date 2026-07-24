@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import {
   createDatabaseClient,
   mergeDuplicateItems,
+  rebuildRecommendationProfiles,
   writeSetting,
 } from "@mirthspool/db";
 import { expect, test, type Page } from "@playwright/test";
@@ -202,6 +203,13 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(page).toHaveURL(/mode=random/);
     await page.getByRole("link", { name: "Unseen" }).click();
     await expect(page).toHaveURL(/mode=unseen/);
+    await page.getByRole("link", { name: "For you" }).click();
+    await expect(page).toHaveURL(/mode=for-you/);
+    await expect(
+      page.getByText(
+        /Use favorites and hides to personalize|personalized from your on-server activity/,
+      ),
+    ).toBeVisible();
     await page.getByRole("link", { name: "Newest" }).click();
 
     await page.getByText("Filter this feed").click();
@@ -372,6 +380,45 @@ test.describe.serial("private setup, sources, and feed", () => {
       .filter({ hasText: "Deterministic animated image" });
     await expect(
       target.getByRole("button", { name: "Remove from favorites" }),
+    ).toBeVisible();
+
+    const recommendationDatabase = createDatabaseClient({
+      connectionString: process.env.DATABASE_URL!,
+    });
+    try {
+      await rebuildRecommendationProfiles(recommendationDatabase, new Date());
+    } finally {
+      await recommendationDatabase.$disconnect();
+    }
+    await page.goto("/?mode=for-you");
+    await expect(
+      page.getByText("Personalized from your on-server activity."),
+    ).toBeVisible();
+    const explanation = page
+      .locator("article.feed-card")
+      .first()
+      .getByText("Why this item?");
+    await expect(explanation).toBeVisible();
+    await explanation.click();
+    await expect(
+      page.locator("article.feed-card").first().getByRole("listitem").first(),
+    ).toBeVisible();
+
+    await page.goto("/settings");
+    const recommendations = page.getByRole("checkbox", {
+      name: "Use my activity to personalize the For you feed",
+    });
+    const resetRecommendations = page.getByRole("button", {
+      name: "Reset recommendation profile",
+    });
+    await recommendations.uncheck();
+    await expect(page.getByText("Preferences saved.")).toBeVisible();
+    await expect(resetRecommendations).toBeDisabled();
+    await recommendations.check();
+    await expect(page.getByText("Preferences saved.")).toBeVisible();
+    await resetRecommendations.click();
+    await expect(
+      page.getByText("Recommendations reset. Favorites and history were kept."),
     ).toBeVisible();
 
     await page.goto("/library/favorites");

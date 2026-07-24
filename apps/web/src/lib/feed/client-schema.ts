@@ -17,7 +17,13 @@ const httpUrlSchema = z
 
 const cachedMediaUrlSchema = z.string().regex(/^\/api\/media\/[0-9a-f-]{36}$/i);
 
-export const feedModeSchema = z.enum(["new", "hot", "random", "unseen"]);
+export const feedModeSchema = z.enum([
+  "new",
+  "hot",
+  "random",
+  "unseen",
+  "for-you",
+]);
 export const mediaKindSchema = z.enum([
   "IMAGE",
   "ANIMATED_IMAGE",
@@ -80,6 +86,27 @@ export const feedItemSchema = z.object({
       score: z.number(),
     })
     .optional(),
+  recommendation: z
+    .object({
+      explanations: z
+        .array(
+          z.object({
+            contribution: z.number().nonnegative(),
+            factor: z.enum([
+              "freshness",
+              "media",
+              "source",
+              "source-priority",
+              "tag",
+            ]),
+            label: z.string().max(120),
+          }),
+        )
+        .max(3),
+      score: z.number().min(0).max(20),
+      scoringVersion: z.number().int().positive(),
+    })
+    .optional(),
   summary: z.string().nullable(),
   title: z.string().nullable(),
 });
@@ -89,6 +116,12 @@ export const feedPageSchema = z.object({
   items: z.array(feedItemSchema).max(50),
   nextCursor: z.string().max(2_048).nullable(),
   seed: z.string().max(128).optional(),
+  personalization: z
+    .object({
+      reason: z.enum(["cold-start", "disabled", "personalized", "stale"]),
+      scoringVersion: z.number().int().positive(),
+    })
+    .optional(),
 });
 
 export type FeedItem = z.infer<typeof feedItemSchema>;

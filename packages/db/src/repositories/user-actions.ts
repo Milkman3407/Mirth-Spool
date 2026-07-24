@@ -231,7 +231,9 @@ export function contentPresentationInclude(userId: string) {
     },
     primarySourcePost: {
       include: {
-        source: { select: { displayName: true, id: true, kind: true } },
+        source: {
+          select: { displayName: true, id: true, kind: true, priority: true },
+        },
       },
     },
     sourcePosts: { select: { id: true } },

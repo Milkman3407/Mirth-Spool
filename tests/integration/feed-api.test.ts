@@ -2,6 +2,8 @@ import {
   contentRandomKey,
   createDatabaseClient,
   hotRankingCoordinate,
+  rebuildRecommendationProfiles,
+  setUserAction,
   writeSetting,
 } from "@mirthspool/db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -143,6 +145,121 @@ describe.sequential("feed API and repository", () => {
       expect(seen.size).toBe(8);
     },
   );
+
+  it("uses a safe cold start, then a versioned personalized snapshot", async () => {
+    const cold = await readFeed(
+      services,
+      userId,
+      "http://localhost/api/feed?mode=for-you&limit=3",
+      new Date("2026-07-23T12:00:00.000Z"),
+    );
+    expect(cold.personalization?.reason).toBe("cold-start");
+    expect(cold.items.every((item) => item.recommendation === undefined)).toBe(
+      true,
+    );
+    await setUserAction(database, {
+      contentItemId: ids[0]!,
+      kind: "FAVORITE",
+      userId,
+    });
+    await rebuildRecommendationProfiles(
+      database,
+      new Date("2026-07-23T11:00:00.000Z"),
+    );
+    const personalized = await readFeed(
+      services,
+      userId,
+      "http://localhost/api/feed?mode=for-you&limit=3",
+      new Date("2026-07-23T12:00:00.000Z"),
+    );
+    expect(personalized.personalization?.reason).toBe("personalized");
+    expect(personalized.items[0]?.recommendation).toMatchObject({
+      scoringVersion: 1,
+    });
+    expect(personalized.nextCursor).toBeTruthy();
+    await expect(
+      readFeed(
+        services,
+        userId,
+        `http://localhost/api/feed?mode=new&limit=3&cursor=${encodeURIComponent(personalized.nextCursor!)}`,
+      ),
+    ).rejects.toThrow("INVALID_CURSOR");
+  });
+
+  it("resets only the derived profile and retains explicit actions", async () => {
+    await database.$transaction([
+      database.recommendationProfile.deleteMany({ where: { userId } }),
+      database.userPreference.update({
+        data: { recommendationResetAt: new Date() },
+        where: { userId },
+      }),
+    ]);
+    expect(
+      await database.userAction.count({
+        where: { kind: "FAVORITE", userId },
+      }),
+    ).toBe(1);
+    expect(
+      await database.recommendationProfile.count({ where: { userId } }),
+    ).toBe(0);
+  });
+
+  it("isolates opposite recommendation aggregates by user", async () => {
+    const favoriteUser = await database.user.create({
+      data: {
+        email: "favorite-profile@example.test",
+        emailNormalized: "favorite-profile@example.test",
+        name: "Favorite Profile",
+        preferences: { create: { maximumContentRating: "SAFE" } },
+      },
+    });
+    const hideUser = await database.user.create({
+      data: {
+        email: "hide-profile@example.test",
+        emailNormalized: "hide-profile@example.test",
+        name: "Hide Profile",
+        preferences: { create: { maximumContentRating: "SAFE" } },
+      },
+    });
+    try {
+      await Promise.all([
+        setUserAction(database, {
+          contentItemId: ids[1]!,
+          kind: "FAVORITE",
+          userId: favoriteUser.id,
+        }),
+        setUserAction(database, {
+          contentItemId: ids[1]!,
+          kind: "HIDE",
+          userId: hideUser.id,
+        }),
+      ]);
+      await rebuildRecommendationProfiles(
+        database,
+        new Date("2026-07-23T11:30:00.000Z"),
+      );
+      const [favoriteProfile, hideProfile] = await Promise.all([
+        database.recommendationProfile.findUniqueOrThrow({
+          where: { userId: favoriteUser.id },
+        }),
+        database.recommendationProfile.findUniqueOrThrow({
+          where: { userId: hideUser.id },
+        }),
+      ]);
+      const favoriteFeatures = favoriteProfile.featuresJson as {
+        sources: Record<string, number>;
+      };
+      const hideFeatures = hideProfile.featuresJson as {
+        sources: Record<string, number>;
+      };
+      expect(favoriteFeatures.sources[sourceId]).toBeGreaterThan(0);
+      expect(hideFeatures.sources[sourceId]).toBeLessThan(0);
+    } finally {
+      await database.user.deleteMany({
+        where: { id: { in: [favoriteUser.id, hideUser.id] } },
+      });
+    }
+  });
 
   it("keeps random stable for a seed without duplicates across wraparound", async () => {
     async function collect() {

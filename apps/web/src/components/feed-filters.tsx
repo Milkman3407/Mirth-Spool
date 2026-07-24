@@ -7,6 +7,7 @@ import type { FormEvent } from "react";
 import type { FeedMode } from "../lib/feed/client-schema";
 
 const modes: readonly Readonly<{ label: string; value: FeedMode }>[] = [
+  { label: "For you", value: "for-you" },
   { label: "Newest", value: "new" },
   { label: "Hot", value: "hot" },
   { label: "Random", value: "random" },

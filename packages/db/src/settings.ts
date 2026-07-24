@@ -40,6 +40,30 @@ const settingDefinitions = {
     defaultValue: true,
     schema: z.boolean(),
   },
+  "recommendations.weights": {
+    defaultValue: {
+      favorite: 3,
+      freshness: 0.8,
+      hide: -4,
+      media: 0.5,
+      source: 1,
+      sourcePriority: 0.25,
+      tag: 0.75,
+      view: 0.15,
+    },
+    schema: z
+      .object({
+        favorite: z.number().min(0).max(5),
+        freshness: z.number().min(0).max(2),
+        hide: z.number().min(-5).max(0),
+        media: z.number().min(0).max(2),
+        source: z.number().min(0).max(3),
+        sourcePriority: z.number().min(0).max(1),
+        tag: z.number().min(0).max(3),
+        view: z.number().min(0).max(1),
+      })
+      .strict(),
+  },
 } as const;
 
 export type SettingKey = keyof typeof settingDefinitions;
