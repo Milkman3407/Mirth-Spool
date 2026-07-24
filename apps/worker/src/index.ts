@@ -18,6 +18,7 @@ import {
   executeRetentionMaintenance,
   planRetentionMaintenance,
   PostgresHealthProbe,
+  rebuildRecommendationProfiles,
 } from "@mirthspool/db";
 import {
   bullConnectionFromUrl,
@@ -159,6 +160,9 @@ async function main(): Promise<void> {
           now: new Date(),
         });
       }
+      if (job.name === "recommendations-refresh") {
+        return rebuildRecommendationProfiles(database);
+      }
       const now = Date.now();
       const cutoffs = {
         auditBefore: new Date(
@@ -291,6 +295,19 @@ async function main(): Promise<void> {
       {},
       {
         jobId: `maintenance-${day}`,
+        removeOnComplete: {
+          age: config.completedJobRetentionSeconds,
+          count: 30,
+        },
+        removeOnFail: { age: config.failedJobRetentionSeconds, count: 100 },
+      },
+    );
+    const hour = new Date().toISOString().slice(0, 13);
+    await maintenanceQueue.add(
+      "recommendations-refresh",
+      {},
+      {
+        jobId: `recommendations-${hour}`,
         removeOnComplete: {
           age: config.completedJobRetentionSeconds,
           count: 30,
