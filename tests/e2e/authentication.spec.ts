@@ -491,6 +491,9 @@ test.describe.serial("private setup, sources, and feed", () => {
 
     await target.getByRole("link", { name: "View details" }).click();
     await expect(page).toHaveURL(/\/content\/[0-9a-f-]+/);
+    await expect(
+      page.getByRole("heading", { name: "Deterministic animated image" }),
+    ).toBeVisible();
     await page.goto("/library/history");
     await expect(
       page.getByRole("heading", { name: "View history" }),
