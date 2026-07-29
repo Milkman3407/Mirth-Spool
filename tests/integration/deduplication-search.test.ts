@@ -15,7 +15,7 @@ import { readSearch } from "../../apps/web/src/lib/search/search-service.js";
 const database = createDatabaseClient({
   connectionString: process.env.DATABASE_URL!,
 });
-const secret = "REDACTED_SYNTHETIC_FIXTURE";
+const secret = createHash("sha256").update(randomUUID()).digest("hex");
 const suffix = randomUUID();
 const contentIds: string[] = [];
 const sourceIds: string[] = [];

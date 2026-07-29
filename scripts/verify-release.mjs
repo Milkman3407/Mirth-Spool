@@ -40,7 +40,7 @@ const requiredText = new Map([
   [releaseNotesPath, [`# MirthSpool ${expectedTag}`]],
   [
     "compose.release.yaml",
-    [`mirth-spool-web:${version}`, `mirth-spool-worker:${version}`],
+    ["MIRTHSPOOL_WEB_IMAGE:?", "MIRTHSPOOL_WORKER_IMAGE:?"],
   ],
   ["docs/INSTALL.md", ["sha256:", "linux/amd64"]],
 ]);

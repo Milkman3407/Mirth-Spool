@@ -23,7 +23,17 @@ RUN pnpm install --frozen-lockfile
 
 FROM dependencies AS builder
 
-COPY . .
+COPY tsconfig.base.json tsconfig.json ./
+COPY apps/web apps/web
+COPY apps/worker apps/worker
+COPY packages/config packages/config
+COPY packages/connectors packages/connectors
+COPY packages/deduplication packages/deduplication
+COPY packages/db packages/db
+COPY packages/redis packages/redis
+COPY packages/shared packages/shared
+COPY packages/storage packages/storage
+COPY packages/ui packages/ui
 RUN pnpm build
 
 FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime

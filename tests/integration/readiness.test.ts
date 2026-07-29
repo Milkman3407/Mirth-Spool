@@ -44,7 +44,7 @@ describe("dependency readiness", () => {
     const results = await Promise.all([
       new PostgresHealthProbe({
         connectionString:
-          "postgresql://invalid:invalid@127.0.0.1:1/unavailable",
+          "postgresql://invalid:unavailable-test-password-0001@127.0.0.1:1/unavailable",
         timeoutMs: 200,
       }).check(),
       new RedisHealthProbe({

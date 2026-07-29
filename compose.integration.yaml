@@ -1,4 +1,12 @@
 services:
+  web:
+    environment:
+      NODE_ENV: test
+
+  worker:
+    environment:
+      NODE_ENV: test
+
   postgres:
     cpus: 2.0
     ports:

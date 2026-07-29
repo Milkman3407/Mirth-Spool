@@ -97,6 +97,16 @@ const nonPublicIpv6Cidrs = [
   ["ff00::", 8],
 ] as const;
 
+function embeddedIpv4(parts: readonly number[]): string | null {
+  const mapped = ipv6Prefix(parts, expandIpv6("::ffff:0:0")!, 96);
+  const nat64 = ipv6Prefix(parts, expandIpv6("64:ff9b::")!, 96);
+  const sixToFour = ipv6Prefix(parts, expandIpv6("2002::")!, 16);
+  if (!mapped && !nat64 && !sixToFour) return null;
+  const high = sixToFour ? parts[1]! : parts[6]!;
+  const low = sixToFour ? parts[2]! : parts[7]!;
+  return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
+}
+
 export function isPublicAddress(address: string): boolean {
   const ipv4 = ipv4Number(address);
   if (ipv4 !== null) {
@@ -106,12 +116,8 @@ export function isPublicAddress(address: string): boolean {
   }
   const ipv6 = expandIpv6(address);
   if (!ipv6) return false;
-  if (ipv6Prefix(ipv6, expandIpv6("::ffff:0:0")!, 96)) {
-    const mapped = `${(ipv6[6]! >> 8) & 0xff}.${ipv6[6]! & 0xff}.${
-      (ipv6[7]! >> 8) & 0xff
-    }.${ipv6[7]! & 0xff}`;
-    return isPublicAddress(mapped);
-  }
+  const embedded = embeddedIpv4(ipv6);
+  if (embedded) return isPublicAddress(embedded);
   return !nonPublicIpv6Cidrs.some(([base, prefix]) =>
     ipv6Prefix(ipv6, expandIpv6(base)!, prefix),
   );
@@ -119,7 +125,8 @@ export function isPublicAddress(address: string): boolean {
 
 export function assertAddressPolicy(
   addresses: readonly ResolvedAddress[],
-  allowPrivateAddresses: boolean,
+  privateAllowlist: readonly string[] = [],
+  hostname = "",
 ): ResolvedAddress {
   if (addresses.length === 0) {
     throw new Error("Host did not resolve to an address");
@@ -128,11 +135,42 @@ export function assertAddressPolicy(
     if (isIP(result.address) !== result.family) {
       throw new Error("Resolver returned an invalid address");
     }
-    if (!allowPrivateAddresses && !isPublicAddress(result.address)) {
+    if (
+      !isPublicAddress(result.address) &&
+      !privateAllowlist.some((entry) =>
+        matchesAllowlist(entry, hostname, result.address),
+      )
+    ) {
       throw new Error("Host resolved to a disallowed address");
     }
   }
   return addresses[0]!;
+}
+
+function matchesAllowlist(
+  entry: string,
+  hostname: string,
+  address: string,
+): boolean {
+  if (entry === hostname.toLowerCase() || entry === address.toLowerCase())
+    return true;
+  const slash = entry.lastIndexOf("/");
+  if (slash < 1) return false;
+  const base = entry.slice(0, slash);
+  const prefix = Number(entry.slice(slash + 1));
+  const ipv4 = ipv4Number(address);
+  if (ipv4 !== null && isIP(base) === 4 && prefix >= 0 && prefix <= 32)
+    return inIpv4Cidr(ipv4, base, prefix);
+  const ipv6 = expandIpv6(address);
+  const ipv6Base = expandIpv6(base);
+  return Boolean(
+    ipv6 &&
+    ipv6Base &&
+    Number.isInteger(prefix) &&
+    prefix >= 0 &&
+    prefix <= 128 &&
+    ipv6Prefix(ipv6, ipv6Base, prefix),
+  );
 }
 
 export function validateOutboundUrl(
@@ -146,6 +184,7 @@ export function validateOutboundUrl(
   }
   if (url.username || url.password)
     throw new Error("URL credentials are not allowed");
+  if (url.hash) throw new Error("URL fragments are not allowed");
   if (!url.hostname || url.hostname.endsWith(".")) {
     throw new Error("URL hostname is invalid");
   }

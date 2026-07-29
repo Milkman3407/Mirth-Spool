@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-export const sourceKindSchema = z.enum(["RSS", "LEMMY", "MASTODON", "REDDIT"]);
+export const sourceKindSchema = z.enum([
+  "RSS",
+  "LEMMY",
+  "MASTODON",
+  "REDDIT",
+  "IFUNNY",
+]);
 
 export const mediaKindSchema = z.enum([
   "IMAGE",

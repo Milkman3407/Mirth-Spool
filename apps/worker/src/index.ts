@@ -5,6 +5,7 @@ import process from "node:process";
 import {
   ConnectorRegistry,
   HardenedHttpClient,
+  ifunnyConnector,
   lemmyConnector,
   mastodonConnector,
   redditConnector,
@@ -116,7 +117,7 @@ async function main(): Promise<void> {
       database,
       duplicateQueue,
       http: new HardenedHttpClient({
-        allowPrivateAddresses: security.allowPrivateSourceUrls,
+        privateAddressAllowlist: security.privateSourceAllowlist,
         allowedPorts: security.allowedSourcePorts,
         logger,
       }),
@@ -137,6 +138,7 @@ async function main(): Promise<void> {
         lemmyConnector,
         mastodonConnector,
         redditConnector,
+        ifunnyConnector,
       ]),
       tokenCache: new RedisOAuthTokenCache({
         connectTimeoutMs: Math.min(config.healthCheckTimeoutMs, 1_000),
@@ -201,7 +203,7 @@ async function main(): Promise<void> {
       database,
       logger,
       mediaClient: new HardenedMediaClient({
-        allowPrivateAddresses: security.allowPrivateMediaUrls,
+        privateAddressAllowlist: security.privateMediaAllowlist,
         allowedPorts: security.allowedMediaPorts,
         limits: {
           maxCompressedBytes: 500_000_000,

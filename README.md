@@ -3,10 +3,11 @@
 MirthSpool is a private, self-hosted content aggregator for administrator-selected meme-oriented sources. The project is being built milestone by milestone from the checked-in [Codex build pack](mirthspool-codex-plan/README.md).
 
 Version 0.1.0 includes the production runtime, PostgreSQL domain model, private
-authentication, official RSS, Lemmy, Mastodon-compatible, and approved Reddit
-Data API ingestion, ranked browsing, private user libraries, bounded optional
-media caching, search/deduplication, an installable PWA, and operations and
-recovery controls. Manual content-upload functionality is intentionally absent.
+authentication, official RSS, Lemmy, Mastodon-compatible, approved Reddit Data
+API, and public iFunny daily-top-meme ingestion, ranked browsing, private user
+libraries, bounded optional media caching, search/deduplication, an installable
+PWA, and operations and recovery controls. Manual content-upload functionality
+is intentionally absent.
 
 ## Install or develop
 
@@ -32,12 +33,15 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-docker compose config
+docker compose config --quiet
 pnpm test:integration
 pnpm test:e2e
 pnpm docs:check
 pnpm release:verify
 ```
+
+Never post `.env`, rendered Compose output, `docker inspect` output, or logs to
+GitHub; they can contain credentials and private deployment details.
 
 ## Selecting and executing the next milestone
 

@@ -1,5 +1,7 @@
 ﻿import type { DatabaseClient } from "@mirthspool/db";
 
+import { createHash, timingSafeEqual } from "node:crypto";
+
 import { recordAuditEvent } from "./audit";
 import { normalizeEmail } from "./password-policy";
 
@@ -10,6 +12,17 @@ export class SetupClosedError extends Error {
     super("First-run setup is closed.");
     this.name = "SetupClosedError";
   }
+}
+
+export function isValidSetupToken(
+  suppliedToken: string,
+  configuredToken: string,
+): boolean {
+  const suppliedDigest = createHash("sha256").update(suppliedToken).digest();
+  const configuredDigest = createHash("sha256")
+    .update(configuredToken)
+    .digest();
+  return timingSafeEqual(suppliedDigest, configuredDigest);
 }
 
 export async function isSetupOpen(database: DatabaseClient): Promise<boolean> {

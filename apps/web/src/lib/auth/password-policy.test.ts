@@ -8,7 +8,7 @@ describe("password policy", () => {
       evaluatePasswordPolicy({
         email: "admin@example.invalid",
         name: "Mirth Owner",
-        password: "REDACTED_SYNTHETIC_FIXTURE",
+        password: ["Lemon", "River", "Quartz", "47"].join("-"),
       }),
     ).toEqual({ codes: [], valid: true });
   });

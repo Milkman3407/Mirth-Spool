@@ -5,6 +5,7 @@ import console from "node:console";
 import {
   ConnectorRegistry,
   HardenedHttpClient,
+  ifunnyConnector,
   lemmyConnector,
   mastodonConnector,
   redditConnector,
@@ -49,12 +50,13 @@ export function getSourceServices(): SourceServices {
     lemmyConnector,
     mastodonConnector,
     redditConnector,
+    ifunnyConnector,
   ]);
   services = Object.freeze({
     dependencies: Object.freeze({
       database: getAuthServices().database,
       http: new HardenedHttpClient({
-        allowPrivateAddresses: security.allowPrivateSourceUrls,
+        privateAddressAllowlist: security.privateSourceAllowlist,
         allowedPorts: security.allowedSourcePorts,
         logger,
       }),

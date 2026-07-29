@@ -29,8 +29,13 @@ least 32 characters for `MIRTHSPOOL_AUTH_SECRET` and
 digest references, cache/retention limits, and only reviewed network exceptions.
 Keep `.env` and the encryption key out of backups and source control; escrow the
 key separately.
+Never post `.env`, rendered Compose output, `docker inspect` output, or logs to
+GitHub. Validate Compose without rendering secrets by using
+`docker compose config --quiet`.
 
 ```bash
+pnpm release:images:verify
+docker compose -f compose.yaml -f compose.release.yaml config --quiet
 docker compose -f compose.yaml -f compose.release.yaml pull
 docker compose -f compose.yaml -f compose.release.yaml up -d --wait postgres redis
 docker compose -f compose.yaml -f compose.release.yaml --profile tools run --rm migrate

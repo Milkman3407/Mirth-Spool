@@ -17,7 +17,7 @@ interface ManagedSource {
   displayName: string;
   enabled: boolean;
   id: string;
-  kind: "RSS" | "LEMMY" | "MASTODON" | "REDDIT";
+  kind: "RSS" | "LEMMY" | "MASTODON" | "REDDIT" | "IFUNNY";
   lastAttemptAt: string | null;
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
@@ -242,8 +242,99 @@ export function SourceManager() {
     });
   }
 
+  function createIfunnySource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    void run(async () => {
+      await api(
+        "/api/sources",
+        jsonMutation("POST", {
+          config: {
+            maxEntries: Number(form.get("ifunnyMaxEntries")),
+          },
+          defaultContentRating: form.get("ifunnyDefaultContentRating"),
+          displayName: form.get("ifunnyDisplayName"),
+          enabled: form.get("ifunnyEnabled") === "on",
+          kind: "IFUNNY",
+          pollIntervalSeconds: Number(form.get("ifunnyPollIntervalSeconds")),
+          priority: Number(form.get("ifunnyPriority")),
+        }),
+      );
+      formElement.reset();
+      setNotice("iFunny daily top-memes source created.");
+    });
+  }
+
   return (
     <div className="source-manager">
+      <section className="panel">
+        <h2>Add iFunny top memes of the day</h2>
+        <p className="form-hint">
+          Reads the public daily ranking page. No iFunny account or credentials
+          are required.
+        </p>
+        <form className="source-form" onSubmit={createIfunnySource}>
+          <label>
+            iFunny display name
+            <input
+              defaultValue="iFunny top memes — day"
+              maxLength={200}
+              name="ifunnyDisplayName"
+              required
+            />
+          </label>
+          <label>
+            Maximum entries per fetch
+            <input
+              defaultValue="25"
+              max="50"
+              min="1"
+              name="ifunnyMaxEntries"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Poll interval (seconds)
+            <input
+              defaultValue="3600"
+              max="86400"
+              min="60"
+              name="ifunnyPollIntervalSeconds"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Priority
+            <input
+              defaultValue="0"
+              max="100"
+              min="-100"
+              name="ifunnyPriority"
+              required
+              type="number"
+            />
+          </label>
+          <label>
+            Rating fallback
+            <select defaultValue="UNKNOWN" name="ifunnyDefaultContentRating">
+              <option value="UNKNOWN">Unknown (review required)</option>
+              <option value="SAFE">Safe</option>
+              <option value="SENSITIVE">Sensitive</option>
+              <option value="ADULT">Adult</option>
+            </select>
+          </label>
+          <label>
+            <input name="ifunnyEnabled" type="checkbox" /> Enabled
+          </label>
+          <button disabled={pending} type="submit">
+            Add iFunny source
+          </button>
+        </form>
+      </section>
+
       <section className="panel">
         <h2>Add RSS / Atom source</h2>
         <p className="form-hint">
@@ -814,6 +905,13 @@ function SourceEditor({
                 },
               }
             : {}),
+          ...(source.kind === "IFUNNY"
+            ? {
+                config: {
+                  maxEntries: Number(form.get("ifunnyMaxEntries")),
+                },
+              }
+            : {}),
           ...(source.kind === "LEMMY"
             ? {
                 config: {
@@ -932,6 +1030,29 @@ function SourceEditor({
         </div>
       </dl>
       <form className="source-form compact" onSubmit={update}>
+        {source.kind === "IFUNNY" ? (
+          <>
+            <label>
+              Daily ranking URL
+              <input
+                disabled
+                value="https://ifunny.co/top-memes/day"
+                readOnly
+              />
+            </label>
+            <label>
+              Maximum entries per fetch
+              <input
+                defaultValue={Number(source.configJson.maxEntries ?? 25)}
+                max="50"
+                min="1"
+                name="ifunnyMaxEntries"
+                required
+                type="number"
+              />
+            </label>
+          </>
+        ) : null}
         {source.kind === "RSS" ? (
           <>
             <label>
@@ -1334,7 +1455,9 @@ function SourceEditor({
                       ? `${body.result.message} ${details.instanceTitle ?? details.instanceHost} reports ${details.instanceVersion ?? "an unknown version"} (${details.apiCompatibility ?? "Mastodon API"}).`
                       : details?.subreddit
                         ? `${body.result.message} ${details.subredditTitle ?? details.subreddit} returned ${details.sampleItemCount ?? "0"} sample posts; OAuth credential health is ${details.credentialHealth ?? "unknown"}.`
-                        : body.result.message,
+                        : details?.collection
+                          ? `${body.result.message} ${details.sampleItemCount ?? "0"} sample entries parsed.`
+                          : body.result.message,
               );
             })
           }

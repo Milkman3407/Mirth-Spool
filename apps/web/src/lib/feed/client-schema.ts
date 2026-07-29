@@ -73,7 +73,7 @@ export const feedItemSchema = z.object({
   primarySource: z
     .object({
       displayName: z.string(),
-      kind: z.enum(["RSS", "LEMMY", "MASTODON", "REDDIT"]),
+      kind: z.enum(["RSS", "LEMMY", "MASTODON", "REDDIT", "IFUNNY"]),
       providerUrl: httpUrlSchema.nullable(),
       sourceId: z.uuid(),
     })

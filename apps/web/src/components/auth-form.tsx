@@ -68,10 +68,22 @@ export function AuthForm({ mode }: { mode: Mode }) {
         />
       </label>
       {mode === "setup" ? (
-        <p className="form-hint">
-          Use at least 12 characters. Common and compromised-style passwords are
-          rejected.
-        </p>
+        <>
+          <label>
+            Setup token
+            <input
+              autoComplete="off"
+              maxLength={512}
+              name="setupToken"
+              required
+              type="password"
+            />
+          </label>
+          <p className="form-hint">
+            Use at least 12 characters. Common and compromised-style passwords
+            are rejected.
+          </p>
+        </>
       ) : null}
       {error ? (
         <p className="form-error" role="alert">

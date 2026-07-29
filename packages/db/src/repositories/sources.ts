@@ -7,7 +7,7 @@ import { systemClock } from "../repository-types.js";
 const sourceInputSchema = z
   .object({
     displayName: z.string().trim().min(1).max(200),
-    kind: z.enum(["RSS", "LEMMY", "MASTODON", "REDDIT"]),
+    kind: z.enum(["RSS", "LEMMY", "MASTODON", "REDDIT", "IFUNNY"]),
     priority: z.number().int().min(-100).max(100).default(0),
     pollIntervalSeconds: z.number().int().min(60).max(86_400).default(900),
     configJson: z.record(z.string(), z.json()),

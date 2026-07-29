@@ -2,6 +2,10 @@
 
 import { apiError, apiJson, requestIdFrom } from "../../../lib/api-response";
 import {
+  AUTH_JSON_MAX_BYTES,
+  readBoundedJson,
+} from "../../../lib/bounded-json";
+import {
   evaluatePasswordPolicy,
   normalizeEmail,
 } from "../../../lib/auth/password-policy";
@@ -14,6 +18,8 @@ import {
 import { isSameOriginJsonMutation } from "../../../lib/auth/request-security";
 import {
   createFirstAdministrator,
+  isSetupOpen,
+  isValidSetupToken,
   SetupClosedError,
 } from "../../../lib/auth/setup-service";
 import { getAuthServices } from "../../../lib/auth/server";
@@ -23,6 +29,7 @@ const setupBodySchema = z
     email: z.email().max(320),
     name: z.string().trim().min(1).max(100),
     password: z.string().min(1).max(128),
+    setupToken: z.string().min(1).max(512),
   })
   .strict();
 
@@ -36,13 +43,28 @@ export async function POST(request: Request): Promise<Response> {
       status: 403,
     });
   }
-  const parsed = setupBodySchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const bounded = await readBoundedJson(request, {
+    maxBytes: AUTH_JSON_MAX_BYTES,
+    requestId,
+  });
+  if ("response" in bounded) return bounded.response;
+  const parsed = setupBodySchema.safeParse(bounded.value);
   if (!parsed.success) {
     return apiError("VALIDATION_FAILED", "The setup details are invalid.", {
       requestId,
       status: 400,
+    });
+  }
+  if (!(await isSetupOpen(database))) {
+    return apiError("SETUP_CLOSED", "First-run setup is closed.", {
+      requestId,
+      status: 409,
+    });
+  }
+  if (!isValidSetupToken(parsed.data.setupToken, authConfig.setupToken)) {
+    return apiError("SETUP_TOKEN_INVALID", "Setup authorization failed.", {
+      requestId,
+      status: 403,
     });
   }
   const email = normalizeEmail(parsed.data.email);
@@ -58,6 +80,7 @@ export async function POST(request: Request): Promise<Response> {
     const address = getClientAddress(
       request.headers,
       authConfig.trustedProxyAddresses,
+      authConfig.trustedProxySecret,
     );
     const [ipLimit, accountLimit] = await Promise.all([
       consumeRateLimit(authenticationRateLimitStore, {

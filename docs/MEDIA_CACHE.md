@@ -47,10 +47,10 @@ timeouts, compressed bodies, and decompressed bodies are rejected by default.
 Magic-byte validation permits bounded PNG, JPEG, GIF, WebP, MP4, and WebM only.
 HTML, SVG, unknown formats, and declared/detected MIME mismatches are blocked.
 
-`ALLOW_PRIVATE_MEDIA_URLS=true` is intended only for controlled local fixtures
-or explicitly trusted internal providers. When it is enabled, restrict
-`MIRTHSPOOL_MEDIA_ALLOWED_PORTS` to the exact required ports. This exception is
-independent of `ALLOW_PRIVATE_SOURCE_URLS`.
+Use `MIRTHSPOOL_PRIVATE_MEDIA_ALLOWLIST` only for reviewed exact hostnames, IPs,
+or CIDRs and restrict `MIRTHSPOOL_MEDIA_ALLOWED_PORTS` to required ports. This
+policy is independent of `MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST`; enabled legacy
+broad private-network switches are rejected.
 
 ## Configuration
 
@@ -60,7 +60,7 @@ independent of `ALLOW_PRIVATE_SOURCE_URLS`.
   defaults to `2`.
 - `MIRTHSPOOL_MEDIA_ALLOWED_PORTS` is a comma-separated allowlist and defaults
   to `80,443`.
-- `ALLOW_PRIVATE_MEDIA_URLS` defaults to `false`.
+- `MIRTHSPOOL_PRIVATE_MEDIA_ALLOWLIST` defaults to empty.
 
 If storage health is unavailable, remote-only browsing continues to work. Cache
 jobs fail visibly with bounded error codes; operators should restore the volume,

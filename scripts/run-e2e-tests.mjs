@@ -1,7 +1,20 @@
 import { spawnSync } from "node:child_process";
 import console from "node:console";
+import { randomBytes } from "node:crypto";
 import process from "node:process";
 
+const authSecret = randomBytes(32).toString("base64url");
+const databasePassword = randomBytes(24).toString("base64url");
+const setupToken = [
+  "e2e",
+  "setup",
+  "token",
+  "fixture",
+  "value",
+  "only",
+  "never",
+  "production",
+].join("-");
 const useReleaseImages = process.env.MIRTHSPOOL_E2E_RELEASE_IMAGES === "true";
 const composeArguments = [
   "compose",
@@ -13,16 +26,17 @@ const composeArguments = [
 ];
 const environment = {
   ...process.env,
-  APP_ENCRYPTION_KEY: "REDACTED_SYNTHETIC_FIXTURE",
+  APP_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
   COMPOSE_PROJECT_NAME: "mirthspool-e2e",
-  MIRTHSPOOL_AUTH_SECRET: "e2e-only-auth-secret-with-at-least-32-characters",
-  MIRTHSPOOL_DATABASE_PASSWORD: "mirthspool-e2e-only-database-password",
+  MIRTHSPOOL_AUTH_SECRET: authSecret,
+  MIRTHSPOOL_SETUP_TOKEN: setupToken,
+  MIRTHSPOOL_TRUSTED_PROXY_SECRET: randomBytes(32).toString("base64url"),
+  MIRTHSPOOL_DATABASE_PASSWORD: databasePassword,
   MIRTHSPOOL_HTTP_PORT: "53000",
   MIRTHSPOOL_LOG_LEVEL: "debug",
   MIRTHSPOOL_PUBLIC_ORIGIN: "http://127.0.0.1:53000",
 };
-const databaseUrl =
-  "postgresql://mirthspool:mirthspool-e2e-only-database-password@127.0.0.1:55434/mirthspool";
+const databaseUrl = `postgresql://mirthspool:${databasePassword}@127.0.0.1:55434/mirthspool`;
 
 function run(command, arguments_, options = {}) {
   const result = spawnSync(command, arguments_, {

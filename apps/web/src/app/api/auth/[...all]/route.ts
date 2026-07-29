@@ -2,6 +2,10 @@
 import { z } from "zod";
 
 import { apiError, apiJson, requestIdFrom } from "../../../../lib/api-response";
+import {
+  AUTH_JSON_MAX_BYTES,
+  readBoundedJson,
+} from "../../../../lib/bounded-json";
 import { recordAuditEvent } from "../../../../lib/auth/audit";
 import { mapAuthenticationError } from "../../../../lib/auth/authentication-error";
 import { normalizeEmail } from "../../../../lib/auth/password-policy";
@@ -11,6 +15,7 @@ import {
   hashRateLimitSubject,
 } from "../../../../lib/auth/rate-limit";
 import { getAuthenticatedSession } from "../../../../lib/auth/session";
+import { isSameOriginJsonMutation } from "../../../../lib/auth/request-security";
 import { getAuthServices } from "../../../../lib/auth/server";
 
 const signInBodySchema = z
@@ -45,36 +50,37 @@ async function consumeLoginLimits(request: Request, email: string) {
   const address = getClientAddress(
     request.headers,
     authConfig.trustedProxyAddresses,
+    authConfig.trustedProxySecret,
   );
   const addressSubject = hashRateLimitSubject(
     authConfig.secret,
     "login-ip",
     address,
   );
-  const accountSubject = hashRateLimitSubject(
+  const compoundSubject = hashRateLimitSubject(
     authConfig.secret,
-    "login-account",
-    normalizeEmail(email),
+    "login-ip-account",
+    `${address}\0${normalizeEmail(email)}`,
   );
-  const [addressDecision, accountDecision] = await Promise.all([
+  const [addressDecision, compoundDecision] = await Promise.all([
     consumeRateLimit(authenticationRateLimitStore, {
       key: `login-ip:${addressSubject}`,
-      limit: 10,
+      limit: 20,
       windowSeconds: 900,
     }),
     consumeRateLimit(authenticationRateLimitStore, {
-      key: `login-account:${accountSubject}`,
+      key: `login-ip-account:${compoundSubject}`,
       limit: 5,
       windowSeconds: 900,
     }),
   ]);
   return Object.freeze({
-    accountSubject,
-    allowed: addressDecision.allowed && accountDecision.allowed,
-    count: accountDecision.count,
+    compoundSubject,
+    allowed: addressDecision.allowed && compoundDecision.allowed,
+    count: compoundDecision.count,
     retryAfterSeconds: Math.max(
       addressDecision.retryAfterSeconds,
-      accountDecision.retryAfterSeconds,
+      compoundDecision.retryAfterSeconds,
     ),
   });
 }
@@ -92,12 +98,18 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const { auth, database } = getAuthServices();
+  const { auth, authConfig, database } = getAuthServices();
   const handlers = toNextJsHandler(auth);
   const requestId = requestIdFrom(request);
   const path = authPath(request);
 
   if (path === "/sign-out") {
+    if (!isSameOriginJsonMutation(request, authConfig.publicOrigin)) {
+      return apiError("CSRF_REJECTED", "The request could not be verified.", {
+        requestId,
+        status: 403,
+      });
+    }
     const session = await getAuthenticatedSession(request.headers);
     if (!session) {
       return apiError(
@@ -141,12 +153,12 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const parsed = signInBodySchema.safeParse(
-    await request
-      .clone()
-      .json()
-      .catch(() => null),
-  );
+  const bounded = await readBoundedJson(request.clone(), {
+    maxBytes: AUTH_JSON_MAX_BYTES,
+    requestId,
+  });
+  if ("response" in bounded) return bounded.response;
+  const parsed = signInBodySchema.safeParse(bounded.value);
   if (!parsed.success) {
     return apiError(
       "AUTHENTICATION_FAILED",
@@ -166,7 +178,7 @@ export async function POST(request: Request): Promise<Response> {
           eventType: "AUTH_LOGIN_FAILURE_THRESHOLD",
           metadata: {
             attemptBucket: 6,
-            subject: limit.accountSubject.slice(0, 32),
+            subject: limit.compoundSubject.slice(0, 32),
           },
         });
       }
@@ -228,7 +240,7 @@ export async function POST(request: Request): Promise<Response> {
         eventType: "AUTH_LOGIN_FAILURE_THRESHOLD",
         metadata: {
           attemptBucket: 3,
-          subject: limit.accountSubject.slice(0, 32),
+          subject: limit.compoundSubject.slice(0, 32),
         },
       });
     }

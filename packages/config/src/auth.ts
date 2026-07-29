@@ -23,14 +23,32 @@ const authEnvironmentSchema = z.object({
       "must not be a known placeholder",
     ),
   MIRTHSPOOL_PUBLIC_ORIGIN: z.string(),
+  MIRTHSPOOL_SETUP_TOKEN: z
+    .string()
+    .min(43, "must contain at least 32 bytes of random data")
+    .max(512, "must be at most 512 characters")
+    .refine(
+      (value) => !rejectedSecrets.has(value.toLowerCase()),
+      "must not be a known placeholder",
+    ),
   MIRTHSPOOL_TRUSTED_PROXY_IPS: z.string().max(1_024).default(""),
+  MIRTHSPOOL_TRUSTED_PROXY_SECRET: z
+    .string()
+    .min(32, "must be at least 32 characters")
+    .max(512, "must be at most 512 characters")
+    .refine(
+      (value) => !rejectedSecrets.has(value.toLowerCase()),
+      "must not be a known placeholder",
+    ),
 });
 
 export interface AuthConfig {
   readonly publicOrigin: string;
   readonly secret: string;
   readonly secureCookies: boolean;
+  readonly setupToken: string;
   readonly trustedProxyAddresses: readonly string[];
+  readonly trustedProxySecret: string;
 }
 
 export function parseAuthConfig(environment: unknown): AuthConfig {
@@ -55,7 +73,9 @@ export function parseAuthConfig(environment: unknown): AuthConfig {
       publicOrigin,
       secret: parsed.data.MIRTHSPOOL_AUTH_SECRET,
       secureCookies: new URL(publicOrigin).protocol === "https:",
+      setupToken: parsed.data.MIRTHSPOOL_SETUP_TOKEN,
       trustedProxyAddresses: Object.freeze(trustedProxyAddresses),
+      trustedProxySecret: parsed.data.MIRTHSPOOL_TRUSTED_PROXY_SECRET,
     });
   } catch (error) {
     if (error instanceof ConfigurationError) {

@@ -1,0 +1,27 @@
+name: Repository security scan
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-content:
+    name: Full-history and working-tree secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out every ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all branch and tag refs
+        run: git fetch --force --tags origin "+refs/heads/*:refs/remotes/origin/*"
+      - name: Check forbidden paths and archives
+        run: node scripts/check-forbidden-repository-content.mjs
+      - name: Scan every Git ref
+        run: docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.30.0 git --log-opts="--all" --redact --verbose
+      - name: Scan the current working tree
+        run: docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.30.0 dir --redact --verbose .

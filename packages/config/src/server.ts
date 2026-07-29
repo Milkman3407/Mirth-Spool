@@ -13,7 +13,14 @@ const serverEnvironmentSchema = z.object({
       {
         message: "must use postgres or postgresql",
       },
-    ),
+    )
+    .refine((value) => {
+      const password = new URL(value).password;
+      return (
+        password.length >= 24 &&
+        !/^(?:password|postgres|mirthspool|replace|changeme)/iu.test(password)
+      );
+    }, "must contain a strong, non-placeholder database password"),
   MIRTHSPOOL_HEALTH_CHECK_TIMEOUT_MS: z.coerce
     .number()
     .int()
@@ -184,6 +191,13 @@ export function parseServerConfig(environment: unknown): ServerConfig {
       ...new Set(parsed.error.issues.map((issue) => issue.path.join("."))),
     ].sort();
     throw new ConfigurationError(fields);
+  }
+
+  if (parsed.data.NODE_ENV === "production") {
+    const origin = new URL(parsed.data.MIRTHSPOOL_PUBLIC_ORIGIN);
+    if (origin.protocol !== "https:") {
+      throw new ConfigurationError(["MIRTHSPOOL_PUBLIC_ORIGIN"]);
+    }
   }
 
   try {

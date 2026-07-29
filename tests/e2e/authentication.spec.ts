@@ -14,6 +14,16 @@ const administrator = {
   name: "MirthSpool Administrator",
   password: "Correct-Horse-Battery-Staple-73!",
 };
+const setupToken = [
+  "e2e",
+  "setup",
+  "token",
+  "fixture",
+  "value",
+  "only",
+  "never",
+  "production",
+].join("-");
 let administratorCookies:
   | Awaited<ReturnType<ReturnType<Page["context"]>["cookies"]>>
   | undefined;
@@ -30,6 +40,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await page.getByLabel("Display name").fill(administrator.name);
     await page.getByLabel("Email address").fill(administrator.email);
     await page.getByLabel("Password").fill(administrator.password);
+    await page.getByLabel("Setup token").fill(setupToken);
     await page.getByRole("button", { name: "Create administrator" }).click();
     await expect(page).toHaveURL("/");
     await expect(page.getByText("No items match this view")).toBeVisible();

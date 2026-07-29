@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import path from "node:path";
 
 import { parseAuthConfig } from "./auth.js";
 import { parseClientConfig } from "./client.js";
@@ -9,11 +10,40 @@ import {
 } from "./server.js";
 import { parseSourceSecurityConfig } from "./source-security.js";
 
+const testAuthSecret = [
+  "auth",
+  "fixture",
+  "value",
+  "for",
+  "tests",
+  "only",
+].join("-");
+const alternateAuthSecret = ["alternate", testAuthSecret].join("-");
+const setupToken = [
+  "setup",
+  "token",
+  "fixture",
+  "value",
+  "for",
+  "tests",
+  "never",
+  "production",
+].join("-");
+const trustedProxySecret = [
+  "proxy",
+  "secret",
+  "fixture",
+  "value",
+  "for",
+  "tests",
+].join("-");
+
 describe("server configuration", () => {
   it("parses required values and applies bounded defaults", () => {
     expect(
       parseServerConfig({
-        DATABASE_URL: "postgresql://user:password@postgres:5432/mirthspool",
+        DATABASE_URL:
+          "postgresql://user:strong-database-password-0001@postgres:5432/mirthspool",
         MIRTHSPOOL_PUBLIC_ORIGIN: "https://mirthspool.invalid/path",
         REDIS_URL: "redis://redis:6379",
       }),
@@ -21,7 +51,8 @@ describe("server configuration", () => {
       auditRetentionDays: 365,
       client: { publicOrigin: "https://mirthspool.invalid" },
       completedJobRetentionSeconds: 3_600,
-      databaseUrl: "postgresql://user:password@postgres:5432/mirthspool",
+      databaseUrl:
+        "postgresql://user:strong-database-password-0001@postgres:5432/mirthspool",
       duplicateAnalysisConcurrency: 1,
       duplicateHashMaxBytes: 20_000_000,
       duplicateHashMaxPixels: 16_777_216,
@@ -33,7 +64,7 @@ describe("server configuration", () => {
       ingestionRunRetentionDays: 30,
       logLevel: "info",
       mediaCacheConcurrency: 2,
-      mediaStoragePath: "/var/lib/mirthspool/media",
+      mediaStoragePath: path.resolve("/var/lib/mirthspool/media"),
       nodeEnvironment: "development",
       orphanRetentionDays: 30,
       port: 3_000,
@@ -85,11 +116,31 @@ describe("server configuration", () => {
   it("rejects unbounded duplicate-analysis settings", () => {
     expect(() =>
       parseServerConfig({
-        DATABASE_URL: "postgresql://user:password@postgres:5432/mirthspool",
+        DATABASE_URL:
+          "postgresql://user:strong-database-password-0001@postgres:5432/mirthspool",
         MIRTHSPOOL_DUPLICATE_ANALYSIS_CONCURRENCY: 100,
         MIRTHSPOOL_DUPLICATE_HASH_MAX_BYTES: 500_000_000,
         MIRTHSPOOL_DUPLICATE_MAX_CANDIDATES: 10_000,
         MIRTHSPOOL_PUBLIC_ORIGIN: "https://mirthspool.invalid",
+        REDIS_URL: "redis://redis:6379",
+      }),
+    ).toThrow(ConfigurationError);
+  });
+
+  it("rejects weak database credentials and non-HTTPS production origins", () => {
+    expect(() =>
+      parseServerConfig({
+        DATABASE_URL: "postgresql://user:password@postgres:5432/mirthspool",
+        MIRTHSPOOL_PUBLIC_ORIGIN: "https://mirthspool.invalid",
+        REDIS_URL: "redis://redis:6379",
+      }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      parseServerConfig({
+        DATABASE_URL:
+          "postgresql://user:strong-database-password-0001@postgres:5432/mirthspool",
+        MIRTHSPOOL_PUBLIC_ORIGIN: "http://mirthspool.example",
+        NODE_ENV: "production",
         REDIS_URL: "redis://redis:6379",
       }),
     ).toThrow(ConfigurationError);
@@ -103,7 +154,8 @@ describe("client configuration", () => {
       MIRTHSPOOL_PORT: "4567",
       MIRTHSPOOL_PUBLIC_ORIGIN: "https://mirthspool.invalid",
       NODE_ENV: "production",
-      DATABASE_URL: "postgresql://user:password@postgres:5432/mirthspool",
+      DATABASE_URL:
+        "postgresql://user:strong-database-password-0001@postgres:5432/mirthspool",
       REDIS_URL: "redis://redis:6379",
     });
 
@@ -120,29 +172,37 @@ describe("authentication configuration", () => {
   it("requires a non-placeholder secret and derives secure cookies from the origin", () => {
     expect(
       parseAuthConfig({
-        MIRTHSPOOL_AUTH_SECRET: "REDACTED_SYNTHETIC_FIXTURE",
+        MIRTHSPOOL_AUTH_SECRET: testAuthSecret,
         MIRTHSPOOL_PUBLIC_ORIGIN: "https://mirthspool.invalid/path",
+        MIRTHSPOOL_SETUP_TOKEN: setupToken,
+        MIRTHSPOOL_TRUSTED_PROXY_SECRET: trustedProxySecret,
       }),
     ).toEqual({
       publicOrigin: "https://mirthspool.invalid",
-      secret: "REDACTED_SYNTHETIC_FIXTURE",
+      secret: testAuthSecret,
       secureCookies: true,
+      setupToken,
       trustedProxyAddresses: [],
+      trustedProxySecret,
     });
 
     expect(() =>
       parseAuthConfig({
         MIRTHSPOOL_AUTH_SECRET: "replace-me",
         MIRTHSPOOL_PUBLIC_ORIGIN: "https://mirthspool.invalid",
+        MIRTHSPOOL_SETUP_TOKEN: setupToken,
+        MIRTHSPOOL_TRUSTED_PROXY_SECRET: trustedProxySecret,
       }),
     ).toThrow(ConfigurationError);
   });
 
   it("allows explicitly trusted proxy headers without exposing the secret", () => {
     const config = parseAuthConfig({
-      MIRTHSPOOL_AUTH_SECRET: "REDACTED_SYNTHETIC_FIXTURE",
+      MIRTHSPOOL_AUTH_SECRET: alternateAuthSecret,
       MIRTHSPOOL_PUBLIC_ORIGIN: "http://127.0.0.1:3000",
+      MIRTHSPOOL_SETUP_TOKEN: setupToken,
       MIRTHSPOOL_TRUSTED_PROXY_IPS: "192.0.2.10,2001:db8::10",
+      MIRTHSPOOL_TRUSTED_PROXY_SECRET: trustedProxySecret,
     });
 
     expect(config.trustedProxyAddresses).toEqual([
@@ -154,15 +214,15 @@ describe("authentication configuration", () => {
 });
 
 describe("source security configuration", () => {
-  const encryptionKey = "REDACTED_SYNTHETIC_FIXTURE";
+  const encryptionKey = Buffer.alloc(32, 7).toString("base64");
 
   it("parses a 256-bit key and keeps private-network access disabled", () => {
     const config = parseSourceSecurityConfig({
       APP_ENCRYPTION_KEY: encryptionKey,
     });
     expect(config).toMatchObject({
-      allowPrivateMediaUrls: false,
-      allowPrivateSourceUrls: false,
+      privateMediaAllowlist: [],
+      privateSourceAllowlist: [],
       allowedMediaPorts: [80, 443],
       allowedSourcePorts: [80, 443],
       encryptionKeyVersion: 1,
@@ -170,18 +230,19 @@ describe("source security configuration", () => {
     expect(config.encryptionKey).toHaveLength(32);
   });
 
-  it("requires explicit private access and validates bounded port overrides", () => {
+  it("requires explicit private allowlists and validates bounded port overrides", () => {
     expect(
       parseSourceSecurityConfig({
-        ALLOW_PRIVATE_SOURCE_URLS: "true",
         APP_ENCRYPTION_KEY: encryptionKey,
         APP_ENCRYPTION_KEY_VERSION: "7",
         MIRTHSPOOL_MEDIA_ALLOWED_PORTS: "443,9443",
         MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "443,8443",
+        MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST:
+          "feeds.internal,10.20.0.0/16,fd00::/8",
       }),
     ).toMatchObject({
-      allowPrivateMediaUrls: false,
-      allowPrivateSourceUrls: true,
+      privateMediaAllowlist: [],
+      privateSourceAllowlist: ["feeds.internal", "10.20.0.0/16", "fd00::/8"],
       allowedMediaPorts: [443, 9443],
       allowedSourcePorts: [443, 8443],
       encryptionKeyVersion: 7,
@@ -190,6 +251,12 @@ describe("source security configuration", () => {
       parseSourceSecurityConfig({
         APP_ENCRYPTION_KEY: encryptionKey,
         MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "0,70000",
+      }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      parseSourceSecurityConfig({
+        ALLOW_PRIVATE_SOURCE_URLS: "true",
+        APP_ENCRYPTION_KEY: encryptionKey,
       }),
     ).toThrow(ConfigurationError);
   });

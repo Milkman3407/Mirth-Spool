@@ -1,5 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 
+import { createHmac } from "node:crypto";
+
 import {
   consumeRateLimit,
   consumeInvitationAcceptanceLimits,
@@ -51,10 +53,27 @@ describe("authentication rate limiting", () => {
 
   it("uses proxy addresses only when explicitly trusted", () => {
     const headers = new Headers({ "x-forwarded-for": "203.0.113.8, 10.0.0.1" });
-    expect(getClientAddress(headers, [])).toBe("direct");
-    expect(getClientAddress(headers, ["192.0.2.10"])).toBe("direct");
+    const secret = "proxy-secret-at-least-32-characters";
+    expect(getClientAddress(headers, [], secret)).toBe("direct");
+    expect(getClientAddress(headers, ["192.0.2.10"], secret)).toBe("direct");
     headers.set("x-mirthspool-forwarded-by", "192.0.2.10");
-    expect(getClientAddress(headers, ["192.0.2.10"])).toBe("203.0.113.8");
+    expect(getClientAddress(headers, ["192.0.2.10"], secret)).toBe("direct");
+    const now = 1_800_000_000_000;
+    const timestamp = String(now / 1_000);
+    headers.set("x-forwarded-for", "203.0.113.8");
+    headers.set("x-mirthspool-forwarded-at", timestamp);
+    headers.set(
+      "x-mirthspool-forwarded-signature",
+      createHmac("sha256", secret)
+        .update(`203.0.113.8\n192.0.2.10\n${timestamp}`)
+        .digest("base64url"),
+    );
+    expect(getClientAddress(headers, ["192.0.2.10"], secret, now)).toBe(
+      "203.0.113.8",
+    );
+    expect(
+      getClientAddress(headers, ["192.0.2.10"], secret, now + 60_001),
+    ).toBe("direct");
   });
 
   it("produces opaque stable subjects", () => {

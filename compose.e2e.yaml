@@ -35,7 +35,8 @@ services:
       fixture-feed:
         condition: service_healthy
     environment:
-      ALLOW_PRIVATE_SOURCE_URLS: "true"
+      NODE_ENV: test
+      MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST: "e2e-fixture,127.0.0.1"
       MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "8080"
     ports:
       - "127.0.0.1:53000:3000"
@@ -45,8 +46,9 @@ services:
       fixture-feed:
         condition: service_healthy
     environment:
-      ALLOW_PRIVATE_MEDIA_URLS: "true"
-      ALLOW_PRIVATE_SOURCE_URLS: "true"
+      NODE_ENV: test
+      MIRTHSPOOL_PRIVATE_MEDIA_ALLOWLIST: "e2e-fixture,127.0.0.1"
+      MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST: "e2e-fixture,127.0.0.1"
       MIRTHSPOOL_MEDIA_ALLOWED_PORTS: "8080"
       MIRTHSPOOL_SCHEDULER_INTERVAL_MS: "1000"
       MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "8080"

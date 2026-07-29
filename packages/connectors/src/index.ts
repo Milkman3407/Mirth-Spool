@@ -1,5 +1,6 @@
 export * from "./errors.js";
 export * from "./http-client.js";
+export * from "./ifunny.js";
 export * from "./ip-policy.js";
 export * from "./lemmy.js";
 export * from "./mastodon.js";

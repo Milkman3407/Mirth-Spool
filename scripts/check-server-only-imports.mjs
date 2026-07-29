@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const browserRoots = ["apps/web/src/client", "packages/ui/src"];
+const sourceRoots = ["apps/web/src", "packages/ui/src"];
 const sourceExtensions = new Set([
   ".cjs",
   ".js",
@@ -19,12 +19,17 @@ const forbiddenSpecifiers = [
   "packages/config/src/server.ts",
 ];
 
-export function containsServerOnlyImport(source) {
+export function importedSpecifiers(source) {
   const importPattern =
-    /(?:from\s*|import\s*\(|require\s*\()\s*["']([^"']+)["']/gu;
+    /(?:from\s*|import\s*\(|require\s*\()\s*["']([^"']+)["']|import\s*["']([^"']+)["']/gu;
 
-  return [...source.matchAll(importPattern)].some((match) => {
-    const specifier = match[1]?.replaceAll("\\", "/");
+  return [...source.matchAll(importPattern)]
+    .map((match) => (match[1] ?? match[2])?.replaceAll("\\", "/"))
+    .filter(Boolean);
+}
+
+export function containsServerOnlyImport(source) {
+  return importedSpecifiers(source).some((specifier) => {
     return forbiddenSpecifiers.some(
       (forbidden) =>
         specifier === forbidden ||
@@ -32,6 +37,25 @@ export function containsServerOnlyImport(source) {
         specifier?.includes("/packages/config/src/server"),
     );
   });
+}
+
+function isClientModule(source) {
+  return /^\s*["']use client["'];/u.test(source);
+}
+
+function resolveRelativeImport(fromFile, specifier, sourceFileSet) {
+  if (!specifier.startsWith(".")) {
+    return undefined;
+  }
+  const base = path.resolve(path.dirname(fromFile), specifier);
+  const candidates = [
+    base,
+    ...[...sourceExtensions].map((extension) => `${base}${extension}`),
+    ...[...sourceExtensions].map((extension) =>
+      path.join(base, `index${extension}`),
+    ),
+  ];
+  return candidates.find((candidate) => sourceFileSet.has(candidate));
 }
 
 async function collectSourceFiles(directory) {
@@ -69,16 +93,46 @@ async function main() {
   );
   const files = (
     await Promise.all(
-      browserRoots.map((root) =>
+      sourceRoots.map((root) =>
         collectSourceFiles(path.join(repositoryRoot, root)),
       ),
     )
   ).flat();
+  const sourceFileSet = new Set(files.map((file) => path.resolve(file)));
+  const sources = new Map(
+    await Promise.all(
+      files.map(async (file) => [
+        path.resolve(file),
+        await readFile(file, "utf8"),
+      ]),
+    ),
+  );
+  const queue = [
+    ...[...sources]
+      .filter(([, source]) => isClientModule(source))
+      .map(([file]) => file),
+    ...files.filter((file) =>
+      file.replaceAll("\\", "/").includes("/packages/ui/src/"),
+    ),
+  ];
+  const visited = new Set();
   const violations = [];
 
-  for (const file of files) {
-    if (containsServerOnlyImport(await readFile(file, "utf8"))) {
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (!file || visited.has(file)) {
+      continue;
+    }
+    visited.add(file);
+    const source = sources.get(file) ?? "";
+    if (containsServerOnlyImport(source)) {
       violations.push(path.relative(repositoryRoot, file));
+    }
+    for (const specifier of importedSpecifiers(source)) {
+      const dependency = resolveRelativeImport(file, specifier, sourceFileSet);
+      if (dependency) {
+        queue.push(dependency);
+      }
     }
   }
 

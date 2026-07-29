@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
 
 export interface RateLimitStore {
@@ -17,18 +17,42 @@ export interface RateLimitDecision {
 export function getClientAddress(
   headers: Headers,
   trustedProxyAddresses: readonly string[],
+  trustedProxySecret: string,
+  now = Date.now(),
 ): string {
   const forwardingProxy = headers.get("x-mirthspool-forwarded-by")?.trim();
   if (!forwardingProxy || !trustedProxyAddresses.includes(forwardingProxy)) {
     return "direct";
   }
-  const firstForwarded = headers
-    .get("x-forwarded-for")
-    ?.split(",", 1)[0]
-    ?.trim();
-  return firstForwarded && isIP(firstForwarded) !== 0
-    ? firstForwarded
-    : "unknown";
+  const forwarded = headers.get("x-forwarded-for")?.trim();
+  const timestamp = headers.get("x-mirthspool-forwarded-at")?.trim();
+  const signature = headers.get("x-mirthspool-forwarded-signature")?.trim();
+  if (
+    !forwarded ||
+    forwarded.includes(",") ||
+    isIP(forwarded) === 0 ||
+    !timestamp ||
+    !/^\d{10,13}$/u.test(timestamp) ||
+    !signature
+  ) {
+    return "direct";
+  }
+  const timestampMilliseconds =
+    timestamp.length === 10 ? Number(timestamp) * 1_000 : Number(timestamp);
+  if (
+    !Number.isSafeInteger(timestampMilliseconds) ||
+    Math.abs(now - timestampMilliseconds) > 60_000
+  ) {
+    return "direct";
+  }
+  const expected = createHmac("sha256", trustedProxySecret)
+    .update(`${forwarded}\n${forwardingProxy}\n${timestamp}`)
+    .digest();
+  const supplied = Buffer.from(signature, "base64url");
+  return supplied.length === expected.length &&
+    timingSafeEqual(supplied, expected)
+    ? forwarded
+    : "direct";
 }
 
 export function hashRateLimitSubject(

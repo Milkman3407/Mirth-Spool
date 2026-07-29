@@ -17,6 +17,7 @@ enum SourceKind {
   LEMMY
   MASTODON
   REDDIT
+  IFUNNY
 }
 
 enum SourceStatus {

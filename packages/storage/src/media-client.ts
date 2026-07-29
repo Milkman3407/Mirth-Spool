@@ -25,7 +25,7 @@ export interface MediaDownloadResponse {
 }
 
 export interface HardenedMediaClientOptions {
-  readonly allowPrivateAddresses?: boolean;
+  readonly privateAddressAllowlist?: readonly string[];
   readonly allowedPorts?: readonly number[];
   readonly limits?: Partial<HttpClientLimits>;
   readonly resolver?: MediaAddressResolver;
@@ -64,7 +64,7 @@ const defaultResolver: MediaAddressResolver = Object.freeze({
 });
 
 export class HardenedMediaClient {
-  readonly #allowPrivateAddresses: boolean;
+  readonly #privateAddressAllowlist: readonly string[];
   readonly #allowedPorts: readonly number[];
   readonly #limits: HttpClientLimits;
   readonly #resolver: MediaAddressResolver;
@@ -72,7 +72,9 @@ export class HardenedMediaClient {
   readonly #userAgent: string;
 
   constructor(options: HardenedMediaClientOptions = {}) {
-    this.#allowPrivateAddresses = options.allowPrivateAddresses ?? false;
+    this.#privateAddressAllowlist = Object.freeze([
+      ...(options.privateAddressAllowlist ?? []),
+    ]);
     this.#allowedPorts = Object.freeze([
       ...(options.allowedPorts ?? [80, 443]),
     ]);
@@ -156,7 +158,11 @@ export class HardenedMediaClient {
       }
       let address: ResolvedAddress;
       try {
-        address = assertAddressPolicy(addresses, this.#allowPrivateAddresses);
+        address = assertAddressPolicy(
+          addresses,
+          this.#privateAddressAllowlist,
+          url.hostname,
+        );
       } catch (error) {
         throw new MediaCacheError("MEDIA_ADDRESS_REJECTED", false, {
           cause: error,

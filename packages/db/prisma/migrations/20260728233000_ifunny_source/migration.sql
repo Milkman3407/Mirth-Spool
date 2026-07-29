@@ -1,0 +1,1 @@
+ALTER TYPE "SourceKind" ADD VALUE 'IFUNNY';

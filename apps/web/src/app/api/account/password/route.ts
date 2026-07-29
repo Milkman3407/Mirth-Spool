@@ -1,6 +1,10 @@
 ﻿import { z } from "zod";
 
 import { apiError, apiJson } from "../../../../lib/api-response";
+import {
+  AUTH_JSON_MAX_BYTES,
+  readBoundedJson,
+} from "../../../../lib/bounded-json";
 import { requireApiSession } from "../../../../lib/auth/api-session";
 import { evaluatePasswordPolicy } from "../../../../lib/auth/password-policy";
 import { hashPassword, verifyPassword } from "../../../../lib/auth/password";
@@ -31,9 +35,12 @@ export async function POST(request: Request): Promise<Response> {
       status: 403,
     });
   }
-  const parsed = passwordBodySchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const bounded = await readBoundedJson(request, {
+    maxBytes: AUTH_JSON_MAX_BYTES,
+    requestId: authentication.requestId,
+  });
+  if ("response" in bounded) return bounded.response;
+  const parsed = passwordBodySchema.safeParse(bounded.value);
   if (!parsed.success) {
     return apiError("VALIDATION_FAILED", "The password change is invalid.", {
       requestId: authentication.requestId,

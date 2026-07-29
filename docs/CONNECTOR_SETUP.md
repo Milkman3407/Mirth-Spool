@@ -1,10 +1,10 @@
 # Connector setup guides
 
-All sources are administrator-selected, use official APIs or public feeds, and
-remain subject to global request, response-byte, item, page, duration, retry,
-port, and SSRF limits. Validate before enabling. Never put credentials in a URL,
-source JSON, screenshots, or logs. Detailed protocol and rating mappings are in
-[the connector security boundary](CONNECTORS.md).
+All sources are administrator-selected, use official APIs, public feeds, or a
+reviewed public page, and remain subject to global request, response-byte, item,
+page, duration, retry, port, and SSRF limits. Validate before enabling. Never
+put credentials in a URL, source JSON, screenshots, or logs. Detailed protocol
+and rating mappings are in [the connector security boundary](CONNECTORS.md).
 
 ## RSS and Atom
 
@@ -47,6 +47,17 @@ app-only `read` access and honors response rate-limit headers. It does not acces
 private/quarantined communities, vote, comment, submit, impersonate a user,
 bypass gates, or scrape HTML. Operators remain responsible for deletion and
 retention obligations.
+
+## iFunny top memes of the day
+
+No account or credential is required. Add the fixed public
+`https://ifunny.co/top-memes/day` collection, choose a 1–50 item bound, set a
+rating fallback, and normally poll no more than hourly. The connector makes one
+HTML request, accepts stable `data-meme-id` and `data-meme-link` attributes, and
+normalizes only HTTPS media hosted by `img.getfn.io`. It does not open individual
+posts, execute page scripts, access comments, or send user data. Because this is
+a public-page integration rather than a documented API, an iFunny markup or
+access-policy change will fail validation closed until the connector is reviewed.
 
 After validation, enable one source at a time, trigger one manual refresh, and
 review sanitized health, rating, attribution, and rate-limit results before

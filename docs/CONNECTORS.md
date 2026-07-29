@@ -253,6 +253,22 @@ References: [official timeline methods](https://docs.joinmastodon.org/methods/ti
 [MediaAttachment entity](https://docs.joinmastodon.org/entities/MediaAttachment/).
 No unsupported HTML scraping is used.
 
+## iFunny daily top-memes connector review
+
+- Scope: one public `GET https://ifunny.co/top-memes/day` request per poll. No
+  account, credential, cookie, individual-post request, or pagination is used.
+- Identification: the request uses browser-compatible headers and includes the
+  `MirthSpool/0.1` product token. Response type and decompressed size remain
+  bounded by the shared hardened client.
+- Parsing: stable `data-meme-id` and `data-meme-link` attributes define the
+  card boundary and canonical iFunny URL. Titles, uploader names, relative age,
+  and smile counts are treated as untrusted bounded text.
+- Media: only HTTPS image/video URLs on `img.getfn.io` are accepted. Video
+  posters become previews; unsupported cards and duplicate IDs are skipped.
+- Safety and drift: ratings default to `UNKNOWN`, validation samples at most
+  five cards, and missing stable markup or supported media fails closed with a
+  sanitized connector error. Synthetic tests have no live iFunny dependency.
+
 ## Outbound request policy
 
 The hardened client permits only HTTP and HTTPS, rejects URL credentials, and
@@ -265,11 +281,12 @@ byte limits. Response content types are allowlisted by the connector.
 
 Loopback, private, link-local, carrier-grade NAT, metadata, documentation,
 benchmark, multicast, unspecified, reserved, IPv4-mapped, and local IPv6 ranges
-are rejected by default. `ALLOW_PRIVATE_SOURCE_URLS=true` is an explicit homelab
-exception and should be enabled only when every configured source is trusted.
-It does not enable private media fetching;
-`ALLOW_PRIVATE_MEDIA_URLS` remains a separate, disabled setting reserved for the
-media milestone.
+are rejected by default. Add only reviewed exact hostnames, IPs, or CIDRs to
+`MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST`. The broad
+`ALLOW_PRIVATE_SOURCE_URLS=true` setting is deprecated and rejected. It does not
+enable private media fetching; media uses the separate
+`MIRTHSPOOL_PRIVATE_MEDIA_ALLOWLIST`. Redirects are resolved and checked again,
+and fragments and IPv4-embedded IPv6 destinations cannot bypass the policy.
 
 ## Credential storage
 

@@ -1,12 +1,12 @@
 services:
   web:
-    image: ${MIRTHSPOOL_WEB_IMAGE:-ghcr.io/milkman3407/mirth-spool-web:0.1.3}
+    image: ${MIRTHSPOOL_WEB_IMAGE:?set an immutable ghcr.io image digest}
     build: null
 
   worker:
-    image: ${MIRTHSPOOL_WORKER_IMAGE:-ghcr.io/milkman3407/mirth-spool-worker:0.1.3}
+    image: ${MIRTHSPOOL_WORKER_IMAGE:?set an immutable ghcr.io image digest}
     build: null
 
   migrate:
-    image: ${MIRTHSPOOL_WORKER_IMAGE:-ghcr.io/milkman3407/mirth-spool-worker:0.1.3}
+    image: ${MIRTHSPOOL_WORKER_IMAGE:?set an immutable ghcr.io image digest}
     build: null

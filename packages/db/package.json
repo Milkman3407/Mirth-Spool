@@ -30,14 +30,14 @@
   },
   "dependencies": {
     "@mirthspool/shared": "workspace:*",
-    "@prisma/adapter-pg": "7.9.0",
-    "@prisma/client": "7.9.0",
+    "@prisma/adapter-pg": "7.9.1",
+    "@prisma/client": "7.9.1",
     "pg": "8.22.0",
     "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/pg": "8.20.0",
-    "prisma": "7.9.0",
+    "prisma": "7.9.1",
     "tsx": "4.20.6"
   }
 }

@@ -17,7 +17,10 @@ Exactly one administrator can be created; after that, setup returns a closed
 response and cannot be reopened through the application.
 
 Set `MIRTHSPOOL_AUTH_SECRET` to an independently generated random value of at
-least 32 characters. Changing it invalidates existing signed cookies. Set
+least 32 characters. Changing it invalidates existing signed cookies. Generate
+`MIRTHSPOOL_SETUP_TOKEN` from at least 32 random bytes and enter it only in the
+one-time setup form. It is never accepted in a URL or returned to the browser;
+after the first administrator exists, setup is permanently closed. Set
 `MIRTHSPOOL_PUBLIC_ORIGIN` to the one exact browser origin, including scheme and
 non-default port. Production HTTPS causes cookies to be `Secure`; cookies are
 always `HttpOnly` and `SameSite=Lax`.
@@ -27,10 +30,14 @@ always `HttpOnly` and `SameSite=Lax`.
 Terminate TLS at a trusted reverse proxy and overwrite, rather than append,
 `X-Forwarded-For`. List only its exact address in
 `MIRTHSPOOL_TRUSTED_PROXY_IPS`, and have it overwrite
-`X-MirthSpool-Forwarded-By` with that same address. Unlisted or missing proxy
-identities cause forwarded addresses to be ignored. The application should not
-be directly reachable. This setting only changes the address used for abuse
-controls; it does not relax origin or CSRF validation.
+`X-MirthSpool-Forwarded-By` with that same address. The proxy must also set a
+Unix timestamp in `X-MirthSpool-Forwarded-At` and a base64url HMAC-SHA256 in
+`X-MirthSpool-Forwarded-Signature`. The signed bytes are
+`client-ip + "\n" + proxy-ip + "\n" + timestamp`, keyed by the independent
+`MIRTHSPOOL_TRUSTED_PROXY_SECRET`. Assertions older or newer than 60 seconds,
+unsigned assertions, comma-separated client IPs, and unlisted proxy identities
+are ignored. This setting only changes the address used for abuse controls; it
+does not relax origin or CSRF validation.
 
 The proxy must preserve the original `Host` and HTTPS scheme and should reject
 oversized request bodies. Only the configured public origin is trusted.

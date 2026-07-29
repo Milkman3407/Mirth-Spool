@@ -3,14 +3,9 @@ import { z } from "zod";
 
 import { ConfigurationError } from "./server.js";
 
-const explicitBoolean = z
-  .enum(["true", "false"])
-  .default("false")
-  .transform((value) => value === "true");
-
 const sourceSecurityEnvironmentSchema = z.object({
-  ALLOW_PRIVATE_MEDIA_URLS: explicitBoolean,
-  ALLOW_PRIVATE_SOURCE_URLS: explicitBoolean,
+  ALLOW_PRIVATE_MEDIA_URLS: z.enum(["false", "true"]).optional(),
+  ALLOW_PRIVATE_SOURCE_URLS: z.enum(["false", "true"]).optional(),
   APP_ENCRYPTION_KEY: z
     .string()
     .min(40)
@@ -33,15 +28,37 @@ const sourceSecurityEnvironmentSchema = z.object({
     .default(1),
   MIRTHSPOOL_SOURCE_ALLOWED_PORTS: z.string().default("80,443"),
   MIRTHSPOOL_MEDIA_ALLOWED_PORTS: z.string().default("80,443"),
+  MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST: z.string().max(8_192).default(""),
+  MIRTHSPOOL_PRIVATE_MEDIA_ALLOWLIST: z.string().max(8_192).default(""),
 });
 
 export interface SourceSecurityConfig {
-  readonly allowPrivateMediaUrls: boolean;
-  readonly allowPrivateSourceUrls: boolean;
+  readonly privateMediaAllowlist: readonly string[];
+  readonly privateSourceAllowlist: readonly string[];
   readonly allowedSourcePorts: readonly number[];
   readonly allowedMediaPorts: readonly number[];
   readonly encryptionKey: Uint8Array;
   readonly encryptionKeyVersion: number;
+}
+
+function parseAllowlist(value: string): readonly string[] | null {
+  const entries = value
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  if (
+    entries.length > 128 ||
+    entries.some(
+      (entry) =>
+        entry.length > 255 ||
+        /[\s@?#]/u.test(entry) ||
+        entry.startsWith(".") ||
+        entry.endsWith("."),
+    )
+  ) {
+    return null;
+  }
+  return Object.freeze([...new Set(entries)]);
 }
 
 function parsePorts(value: string): readonly number[] | null {
@@ -66,9 +83,34 @@ export function parseSourceSecurityConfig(
   const mediaPorts = parsed.success
     ? parsePorts(parsed.data.MIRTHSPOOL_MEDIA_ALLOWED_PORTS)
     : null;
-  if (!parsed.success || !ports || !mediaPorts) {
+  const sourceAllowlist = parsed.success
+    ? parseAllowlist(parsed.data.MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST)
+    : null;
+  const mediaAllowlist = parsed.success
+    ? parseAllowlist(parsed.data.MIRTHSPOOL_PRIVATE_MEDIA_ALLOWLIST)
+    : null;
+  const legacyEnabled =
+    parsed.success &&
+    (parsed.data.ALLOW_PRIVATE_MEDIA_URLS === "true" ||
+      parsed.data.ALLOW_PRIVATE_SOURCE_URLS === "true");
+  if (
+    !parsed.success ||
+    !ports ||
+    !mediaPorts ||
+    !sourceAllowlist ||
+    !mediaAllowlist ||
+    legacyEnabled
+  ) {
     const fields = parsed.success
       ? [
+          ...(parsed.data.ALLOW_PRIVATE_MEDIA_URLS === "true"
+            ? ["ALLOW_PRIVATE_MEDIA_URLS"]
+            : []),
+          ...(parsed.data.ALLOW_PRIVATE_SOURCE_URLS === "true"
+            ? ["ALLOW_PRIVATE_SOURCE_URLS"]
+            : []),
+          ...(mediaAllowlist ? [] : ["MIRTHSPOOL_PRIVATE_MEDIA_ALLOWLIST"]),
+          ...(sourceAllowlist ? [] : ["MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST"]),
           ...(mediaPorts ? [] : ["MIRTHSPOOL_MEDIA_ALLOWED_PORTS"]),
           ...(ports ? [] : ["MIRTHSPOOL_SOURCE_ALLOWED_PORTS"]),
         ]
@@ -78,8 +120,8 @@ export function parseSourceSecurityConfig(
     throw new ConfigurationError(fields);
   }
   return Object.freeze({
-    allowPrivateMediaUrls: parsed.data.ALLOW_PRIVATE_MEDIA_URLS,
-    allowPrivateSourceUrls: parsed.data.ALLOW_PRIVATE_SOURCE_URLS,
+    privateMediaAllowlist: mediaAllowlist!,
+    privateSourceAllowlist: sourceAllowlist!,
     allowedMediaPorts: mediaPorts,
     allowedSourcePorts: ports,
     encryptionKey: Buffer.from(parsed.data.APP_ENCRYPTION_KEY, "base64"),

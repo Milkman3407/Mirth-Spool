@@ -344,7 +344,7 @@ class BufferedResponse implements HardenedHttpResponse {
 }
 
 export interface HardenedHttpClientOptions {
-  readonly allowPrivateAddresses?: boolean;
+  readonly privateAddressAllowlist?: readonly string[];
   readonly allowedPorts?: readonly number[];
   readonly limits?: Partial<HttpClientLimits>;
   readonly logger: ConnectorLogger;
@@ -355,7 +355,7 @@ export interface HardenedHttpClientOptions {
 }
 
 export class HardenedHttpClient implements ConnectorHttpClient {
-  readonly #allowPrivateAddresses: boolean;
+  readonly #privateAddressAllowlist: readonly string[];
   readonly #allowedPorts: readonly number[];
   readonly #limits: HttpClientLimits;
   readonly #logger: ConnectorLogger;
@@ -365,7 +365,9 @@ export class HardenedHttpClient implements ConnectorHttpClient {
   readonly #userAgent: string;
 
   constructor(options: HardenedHttpClientOptions) {
-    this.#allowPrivateAddresses = options.allowPrivateAddresses ?? false;
+    this.#privateAddressAllowlist = Object.freeze([
+      ...(options.privateAddressAllowlist ?? []),
+    ]);
     this.#allowedPorts = Object.freeze([
       ...(options.allowedPorts ?? [80, 443]),
     ]);
@@ -455,7 +457,11 @@ export class HardenedHttpClient implements ConnectorHttpClient {
       }
       let address: ResolvedAddress;
       try {
-        address = assertAddressPolicy(resolved, this.#allowPrivateAddresses);
+        address = assertAddressPolicy(
+          resolved,
+          this.#privateAddressAllowlist,
+          url.hostname,
+        );
       } catch (error) {
         throw new ConnectorError("CONFIGURATION", {
           cause: error,

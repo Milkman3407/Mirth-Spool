@@ -54,6 +54,7 @@ export async function POST(request: Request): Promise<Response> {
   const address = getClientAddress(
     request.headers,
     services.authConfig.trustedProxyAddresses,
+    services.authConfig.trustedProxySecret,
   );
   const tokenHash = hashInvitationToken(
     services.authConfig.secret,

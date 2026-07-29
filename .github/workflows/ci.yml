@@ -32,6 +32,8 @@ jobs:
         run: pnpm format:check
       - name: Check documentation links
         run: pnpm docs:check
+      - name: Check forbidden repository content
+        run: pnpm check:repository-safety
       - name: Verify release metadata
         env:
           MIRTHSPOOL_RELEASE_TAG: v0.1.3
@@ -40,11 +42,16 @@ jobs:
         run: pnpm lint
       - name: Type-check
         run: pnpm typecheck
+      - name: Generate ephemeral Compose credentials
+        shell: bash
+        run: |
+          {
+            echo "APP_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "MIRTHSPOOL_AUTH_SECRET=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_DATABASE_PASSWORD=$(openssl rand -hex 24)"
+            echo "MIRTHSPOOL_SETUP_TOKEN=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
       - name: Validate Compose configuration
-        env:
-          APP_ENCRYPTION_KEY: REDACTED_SYNTHETIC_FIXTURE
-          MIRTHSPOOL_AUTH_SECRET: ci-validation-only-auth-secret-000000000
-          MIRTHSPOOL_DATABASE_PASSWORD: ci-validation-only-password
         run: docker compose config --quiet
       - name: Build
         run: pnpm build
@@ -91,11 +98,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Generate ephemeral build credentials
+        shell: bash
+        run: |
+          {
+            echo "APP_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "MIRTHSPOOL_AUTH_SECRET=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_DATABASE_PASSWORD=$(openssl rand -hex 24)"
+            echo "MIRTHSPOOL_SETUP_TOKEN=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
       - name: Build web and worker images
-        env:
-          APP_ENCRYPTION_KEY: REDACTED_SYNTHETIC_FIXTURE
-          MIRTHSPOOL_AUTH_SECRET: ci-build-only-auth-secret-000000000000
-          MIRTHSPOOL_DATABASE_PASSWORD: ci-build-only-password
         run: docker compose build web worker
 
   secret-scan:
@@ -110,6 +122,9 @@ jobs:
         uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+      - name: Scan current working tree
+        run: docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.30.0 dir --redact --verbose .
 
   dependency-scan:
     name: Production dependency audit
@@ -132,11 +147,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Generate ephemeral scan credentials
+        shell: bash
+        run: |
+          {
+            echo "APP_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "MIRTHSPOOL_AUTH_SECRET=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_DATABASE_PASSWORD=$(openssl rand -hex 24)"
+            echo "MIRTHSPOOL_SETUP_TOKEN=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
       - name: Build production images
-        env:
-          APP_ENCRYPTION_KEY: REDACTED_SYNTHETIC_FIXTURE
-          MIRTHSPOOL_AUTH_SECRET: ci-scan-only-auth-secret-0000000000000
-          MIRTHSPOOL_DATABASE_PASSWORD: ci-scan-only-password
         run: docker compose build web worker
       - name: Scan web and worker images
         run: |

@@ -13,6 +13,13 @@ interface RequiredProbes {
 }
 
 let probes: RequiredProbes | undefined;
+let recentCheck:
+  | {
+      readonly expiresAt: number;
+      readonly promise: Promise<readonly DependencyHealth[]>;
+    }
+  | undefined;
+const READINESS_COALESCE_MS = 1_500;
 
 function getProbes(): RequiredProbes {
   if (probes) {
@@ -39,6 +46,17 @@ function getProbes(): RequiredProbes {
 export async function checkRequiredDependencies(): Promise<
   readonly DependencyHealth[]
 > {
+  const now = Date.now();
+  if (recentCheck && recentCheck.expiresAt > now) return recentCheck.promise;
+  const promise = performDependencyCheck();
+  recentCheck = Object.freeze({
+    expiresAt: now + READINESS_COALESCE_MS,
+    promise,
+  });
+  return promise;
+}
+
+async function performDependencyCheck(): Promise<readonly DependencyHealth[]> {
   const required = getProbes();
   const [postgres, redis, storageReady] = await Promise.all([
     required.postgres.check(),

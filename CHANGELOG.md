@@ -5,6 +5,11 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+### Added
+
+- Public iFunny `top-memes/day` ingestion with bounded HTML parsing, direct
+  image/video normalization, source-management controls, and synthetic tests.
+
 ## [0.1.3] - 2026-07-23
 
 ### Fixed

@@ -3,7 +3,13 @@ import { z } from "zod";
 const forbiddenConfigKey =
   /authorization|cookie|credential|password|secret|token/i;
 
-const managedSourceKindSchema = z.enum(["RSS", "LEMMY", "MASTODON", "REDDIT"]);
+const managedSourceKindSchema = z.enum([
+  "RSS",
+  "LEMMY",
+  "MASTODON",
+  "REDDIT",
+  "IFUNNY",
+]);
 
 function secretPaths(
   value: unknown,

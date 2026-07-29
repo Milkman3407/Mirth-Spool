@@ -1,7 +1,10 @@
 import { spawnSync } from "node:child_process";
 import console from "node:console";
+import { randomBytes } from "node:crypto";
 import process from "node:process";
 
+const authSecret = randomBytes(32).toString("base64url");
+const databasePassword = randomBytes(24).toString("base64url");
 const composeArguments = [
   "compose",
   "-f",
@@ -11,19 +14,19 @@ const composeArguments = [
 ];
 const environment = {
   ...process.env,
-  ALLOW_PRIVATE_SOURCE_URLS: "true",
-  APP_ENCRYPTION_KEY: "REDACTED_SYNTHETIC_FIXTURE",
+  MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST: "127.0.0.1,::1",
+  APP_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
   COMPOSE_PROJECT_NAME: "mirthspool-integration",
-  MIRTHSPOOL_DATABASE_PASSWORD: "mirthspool-integration-only-password",
-  MIRTHSPOOL_AUTH_SECRET: "integration-only-auth-secret-with-32-characters",
+  MIRTHSPOOL_DATABASE_PASSWORD: databasePassword,
+  MIRTHSPOOL_AUTH_SECRET: authSecret,
+  MIRTHSPOOL_SETUP_TOKEN: randomBytes(32).toString("base64url"),
+  MIRTHSPOOL_TRUSTED_PROXY_SECRET: randomBytes(32).toString("base64url"),
   MIRTHSPOOL_PUBLIC_ORIGIN: "http://localhost:3000",
   MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "58080",
   REDIS_URL: "redis://127.0.0.1:56379",
 };
-const databaseUrl =
-  "postgresql://mirthspool:mirthspool-integration-only-password@127.0.0.1:55432/mirthspool";
-const emptyDatabaseUrl =
-  "postgresql://mirthspool:mirthspool-integration-only-password@127.0.0.1:55432/mirthspool_empty";
+const databaseUrl = `postgresql://mirthspool:${databasePassword}@127.0.0.1:55432/mirthspool`;
+const emptyDatabaseUrl = `postgresql://mirthspool:${databasePassword}@127.0.0.1:55432/mirthspool_empty`;
 
 function run(command, arguments_, options = {}) {
   const result = spawnSync(command, arguments_, {

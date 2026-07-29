@@ -25,6 +25,8 @@ describe("outbound IP policy", () => {
     "::",
     "::1",
     "::ffff:127.0.0.1",
+    "64:ff9b::7f00:1",
+    "2002:7f00:1::",
     "100::1",
     "2001:db8::1",
     "fc00::1",
@@ -44,13 +46,22 @@ describe("outbound IP policy", () => {
     expect(isPublicAddress(address)).toBe(true),
   );
 
-  it("rejects a mixed DNS answer unless private access is explicit", () => {
+  it("rejects a mixed DNS answer unless every private result is allowlisted", () => {
     const answers = [
       { address: "1.1.1.1", family: 4 as const },
       { address: "127.0.0.1", family: 4 as const },
     ];
-    expect(() => assertAddressPolicy(answers, false)).toThrow("disallowed");
-    expect(assertAddressPolicy(answers, true)).toEqual(answers[0]);
+    expect(() => assertAddressPolicy(answers)).toThrow("disallowed");
+    expect(
+      assertAddressPolicy(answers, ["127.0.0.1"], "feeds.internal"),
+    ).toEqual(answers[0]);
+    expect(
+      assertAddressPolicy(
+        [{ address: "10.20.4.5", family: 4 }],
+        ["10.20.0.0/16"],
+        "feeds.internal",
+      ),
+    ).toEqual({ address: "10.20.4.5", family: 4 });
   });
 
   it("allows only HTTP(S), no embedded credentials, and reviewed ports", () => {
@@ -61,6 +72,9 @@ describe("outbound IP policy", () => {
     expect(() =>
       validateOutboundUrl("https://user:secret@example.com/"),
     ).toThrow();
+    expect(() => validateOutboundUrl("https://example.com/#private")).toThrow(
+      "fragments",
+    );
     expect(() => validateOutboundUrl("https://example.com:8443/")).toThrow();
     expect(
       validateOutboundUrl("https://example.com:8443/", [443, 8443]).port,
