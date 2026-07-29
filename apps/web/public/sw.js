@@ -37,6 +37,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.origin !== self.location.origin) return;
   const type = event.data && event.data.type;
   if (type === "SKIP_WAITING") {
     void self.skipWaiting();

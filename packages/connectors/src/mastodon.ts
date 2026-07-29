@@ -243,13 +243,42 @@ export function mastodonHtmlToPlainText(
   maximum: number,
 ): string | null {
   if (!value) return null;
-  const withoutActiveBlocks = value.replace(
-    /<(?:script|style|svg|math)\b[^>]*>[\s\S]*?<\/(?:script|style|svg|math)\s*>/giu,
-    " ",
-  );
-  const withoutTags = withoutActiveBlocks
-    .replace(/<(?:br|p|div|li|blockquote|h[1-6])\b[^>]*>/giu, " ")
-    .replace(/<[^>]*>?/gu, " ");
+  let withoutTags = "";
+  let insideTag = false;
+  let quote: '"' | "'" | null = null;
+  let tag = "";
+  let suppressedDepth = 0;
+  for (const character of value) {
+    if (!insideTag) {
+      if (character === "<") {
+        insideTag = true;
+        tag = "";
+      } else if (suppressedDepth === 0) {
+        withoutTags += character;
+      }
+      continue;
+    }
+    tag += character;
+    if (quote) {
+      if (character === quote) quote = null;
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      insideTag = false;
+      const match = /^\s*(\/?)\s*([a-z0-9]+)/iu.exec(tag);
+      const name = match?.[2]?.toLowerCase();
+      if (
+        name === "script" ||
+        name === "style" ||
+        name === "svg" ||
+        name === "math"
+      ) {
+        if (match?.[1]) suppressedDepth = Math.max(0, suppressedDepth - 1);
+        else if (!tag.trimEnd().endsWith("/>")) suppressedDepth += 1;
+      }
+      if (suppressedDepth === 0) withoutTags += " ";
+    }
+  }
   const cleaned = decodeEntities(withoutTags)
     .split("")
     .filter((character) => {

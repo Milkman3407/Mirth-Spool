@@ -80,19 +80,51 @@ function text(value: unknown): string | undefined {
   return object ? text(object["#text"]) : undefined;
 }
 
+function stripMarkup(value: string): string {
+  let result = "";
+  let insideTag = false;
+  let quote: '"' | "'" | null = null;
+  let tag = "";
+  let suppressedDepth = 0;
+  for (const character of value) {
+    if (!insideTag) {
+      if (character === "<") {
+        insideTag = true;
+        tag = "";
+      } else if (suppressedDepth === 0) {
+        result += character;
+      }
+      continue;
+    }
+    tag += character;
+    if (quote) {
+      if (character === quote) quote = null;
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      insideTag = false;
+      const match = /^\s*(\/?)\s*([a-z0-9]+)/iu.exec(tag);
+      const name = match?.[2]?.toLowerCase();
+      if (name === "script" || name === "style") {
+        if (match?.[1]) suppressedDepth = Math.max(0, suppressedDepth - 1);
+        else if (!tag.trimEnd().endsWith("/>")) suppressedDepth += 1;
+      }
+      if (suppressedDepth === 0) result += " ";
+    }
+  }
+  return result;
+}
+
 function cleanText(value: unknown, max: number): string | null {
   const source = text(value);
   if (!source) return null;
-  const cleaned = source
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/giu, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/giu, " ")
-    .replace(/<[^>]{0,1000}>/gu, " ")
+  const cleaned = stripMarkup(source)
     .replace(/&(?:nbsp|#160);/giu, " ")
-    .replace(/&amp;/giu, "&")
     .replace(/&lt;/giu, "<")
     .replace(/&gt;/giu, ">")
     .replace(/&quot;/giu, '"')
     .replace(/&#39;|&apos;/giu, "'")
+    .replace(/&amp;/giu, "&")
     .split("")
     .filter((character) => {
       const code = character.charCodeAt(0);
