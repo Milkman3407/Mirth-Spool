@@ -5,6 +5,15 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-08-03
+
+### Fixed
+
+- Aligned the release acceptance public origin with the production HTTPS
+  requirement while retaining direct loopback access to the test container.
+- Added container status and bounded web/worker logs when release acceptance
+  fails, before the isolated Compose project is removed.
+
 ## [0.1.4] - 2026-08-03
 
 ### Added
