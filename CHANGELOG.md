@@ -5,6 +5,13 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-08-03
+
+### Fixed
+
+- Restricted the RSS creation-form browser locator so newly rendered compact
+  source-edit forms cannot become ambiguous matches.
+
 ## [0.1.9] - 2026-08-03
 
 ### Fixed

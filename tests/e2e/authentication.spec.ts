@@ -71,7 +71,7 @@ test.describe.serial("private setup, sources, and feed", () => {
 
     await page.goto("/sources");
     await expectAccessible(page);
-    const rssForm = page.locator("form.source-form").filter({
+    const rssForm = page.locator("form.source-form:not(.compact)").filter({
       has: page.getByLabel("Feed URL"),
     });
     await rssForm.getByLabel("Display name").fill("Fixture RSS feed");
