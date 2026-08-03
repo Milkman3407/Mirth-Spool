@@ -243,13 +243,43 @@ export function mastodonHtmlToPlainText(
   maximum: number,
 ): string | null {
   if (!value) return null;
-  const withoutActiveBlocks = value.replace(
-    /<(?:script|style|svg|math)\b[^>]*>[\s\S]*?<\/(?:script|style|svg|math)\s*>/giu,
-    " ",
-  );
-  const withoutTags = withoutActiveBlocks
-    .replace(/<(?:br|p|div|li|blockquote|h[1-6])\b[^>]*>/giu, " ")
-    .replace(/<[^>]*>?/gu, " ");
+  let withoutTags = "";
+  let insideTag = false;
+  let quote: '"' | "'" | null = null;
+  let tag = "";
+  let suppressedDepth = 0;
+  for (const character of value) {
+    if (!insideTag) {
+      if (character === "<") {
+        insideTag = true;
+        tag = "";
+      } else if (suppressedDepth === 0) {
+        withoutTags += character;
+      }
+      continue;
+    }
+    tag += character;
+    if (quote) {
+      if (character === quote) quote = null;
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      insideTag = false;
+      const parsedTag = parseTagName(tag);
+      const name = parsedTag?.name;
+      if (
+        name === "script" ||
+        name === "style" ||
+        name === "svg" ||
+        name === "math"
+      ) {
+        if (parsedTag?.closing)
+          suppressedDepth = Math.max(0, suppressedDepth - 1);
+        else if (!tag.trimEnd().endsWith("/>")) suppressedDepth += 1;
+      }
+      if (suppressedDepth === 0) withoutTags += " ";
+    }
+  }
   const cleaned = decodeEntities(withoutTags)
     .split("")
     .filter((character) => {
@@ -262,6 +292,35 @@ export function mastodonHtmlToPlainText(
     .replace(/\s+/gu, " ")
     .trim();
   return cleaned ? cleaned.slice(0, maximum) : null;
+}
+
+function parseTagName(
+  tag: string,
+): { readonly closing: boolean; readonly name: string } | null {
+  let index = 0;
+  while (index < tag.length && isAsciiWhitespace(tag.charCodeAt(index)))
+    index += 1;
+  const closing = tag[index] === "/";
+  if (closing) index += 1;
+  while (index < tag.length && isAsciiWhitespace(tag.charCodeAt(index)))
+    index += 1;
+  const start = index;
+  while (index < tag.length) {
+    const code = tag.charCodeAt(index);
+    const alphaNumeric =
+      (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122);
+    if (!alphaNumeric) break;
+    index += 1;
+  }
+  return index === start
+    ? null
+    : { closing, name: tag.slice(start, index).toLowerCase() };
+}
+
+function isAsciiWhitespace(code: number): boolean {
+  return code === 32 || (code >= 9 && code <= 13);
 }
 
 function parseDate(value: string | null | undefined, fallback: Date): string {

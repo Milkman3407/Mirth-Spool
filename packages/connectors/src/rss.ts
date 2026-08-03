@@ -80,19 +80,81 @@ function text(value: unknown): string | undefined {
   return object ? text(object["#text"]) : undefined;
 }
 
+function stripMarkup(value: string): string {
+  let result = "";
+  let insideTag = false;
+  let quote: '"' | "'" | null = null;
+  let tag = "";
+  let suppressedDepth = 0;
+  for (const character of value) {
+    if (!insideTag) {
+      if (character === "<") {
+        insideTag = true;
+        tag = "";
+      } else if (suppressedDepth === 0) {
+        result += character;
+      }
+      continue;
+    }
+    tag += character;
+    if (quote) {
+      if (character === quote) quote = null;
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      insideTag = false;
+      const parsedTag = parseTagName(tag);
+      const name = parsedTag?.name;
+      if (name === "script" || name === "style") {
+        if (parsedTag?.closing)
+          suppressedDepth = Math.max(0, suppressedDepth - 1);
+        else if (!tag.trimEnd().endsWith("/>")) suppressedDepth += 1;
+      }
+      if (suppressedDepth === 0) result += " ";
+    }
+  }
+  return result;
+}
+
+function parseTagName(
+  tag: string,
+): { readonly closing: boolean; readonly name: string } | null {
+  let index = 0;
+  while (index < tag.length && isAsciiWhitespace(tag.charCodeAt(index)))
+    index += 1;
+  const closing = tag[index] === "/";
+  if (closing) index += 1;
+  while (index < tag.length && isAsciiWhitespace(tag.charCodeAt(index)))
+    index += 1;
+  const start = index;
+  while (index < tag.length) {
+    const code = tag.charCodeAt(index);
+    const alphaNumeric =
+      (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122);
+    if (!alphaNumeric) break;
+    index += 1;
+  }
+  return index === start
+    ? null
+    : { closing, name: tag.slice(start, index).toLowerCase() };
+}
+
+function isAsciiWhitespace(code: number): boolean {
+  return code === 32 || (code >= 9 && code <= 13);
+}
+
 function cleanText(value: unknown, max: number): string | null {
   const source = text(value);
   if (!source) return null;
-  const cleaned = source
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/giu, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/giu, " ")
-    .replace(/<[^>]{0,1000}>/gu, " ")
+  const cleaned = stripMarkup(source)
     .replace(/&(?:nbsp|#160);/giu, " ")
-    .replace(/&amp;/giu, "&")
     .replace(/&lt;/giu, "<")
     .replace(/&gt;/giu, ">")
     .replace(/&quot;/giu, '"')
     .replace(/&#39;|&apos;/giu, "'")
+    .replace(/&amp;/giu, "&")
     .split("")
     .filter((character) => {
       const code = character.charCodeAt(0);

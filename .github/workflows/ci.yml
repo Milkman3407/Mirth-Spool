@@ -50,6 +50,8 @@ jobs:
             echo "MIRTHSPOOL_AUTH_SECRET=$(openssl rand -hex 32)"
             echo "MIRTHSPOOL_DATABASE_PASSWORD=$(openssl rand -hex 24)"
             echo "MIRTHSPOOL_SETUP_TOKEN=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_TRUSTED_PROXY_SECRET=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_PUBLIC_ORIGIN=https://localhost"
           } >> "$GITHUB_ENV"
       - name: Validate Compose configuration
         run: docker compose config --quiet
@@ -106,6 +108,8 @@ jobs:
             echo "MIRTHSPOOL_AUTH_SECRET=$(openssl rand -hex 32)"
             echo "MIRTHSPOOL_DATABASE_PASSWORD=$(openssl rand -hex 24)"
             echo "MIRTHSPOOL_SETUP_TOKEN=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_TRUSTED_PROXY_SECRET=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_PUBLIC_ORIGIN=https://localhost"
           } >> "$GITHUB_ENV"
       - name: Build web and worker images
         run: docker compose build web worker
@@ -155,6 +159,8 @@ jobs:
             echo "MIRTHSPOOL_AUTH_SECRET=$(openssl rand -hex 32)"
             echo "MIRTHSPOOL_DATABASE_PASSWORD=$(openssl rand -hex 24)"
             echo "MIRTHSPOOL_SETUP_TOKEN=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_TRUSTED_PROXY_SECRET=$(openssl rand -hex 32)"
+            echo "MIRTHSPOOL_PUBLIC_ORIGIN=https://localhost"
           } >> "$GITHUB_ENV"
       - name: Build production images
         run: docker compose build web worker

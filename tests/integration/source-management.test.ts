@@ -21,7 +21,7 @@ import { createMirthSpoolAuth } from "../../apps/web/src/lib/auth/factory.js";
 import { hashPassword } from "../../apps/web/src/lib/auth/password.js";
 
 const origin = "http://localhost:3000";
-const authSecret = "integration-only-auth-secret-with-32-characters";
+const authSecret = process.env.MIRTHSPOOL_AUTH_SECRET!;
 const password = "Correct-Horse-Battery-Staple-73!";
 
 function request(
@@ -109,7 +109,7 @@ describe.sequential("administrative source management", () => {
     ]);
     await database.credentialAccount.createMany({
       data: [administrator, member].map((user) => ({
-        accountId: user.emailNormalized,
+        accountId: user.id,
         passwordHash,
         providerId: "credential",
         userId: user.id,
