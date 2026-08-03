@@ -5,6 +5,13 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-08-03
+
+### Fixed
+
+- Replaced a stale E2E private-network label with the exact fixture source and
+  media hostnames used by the release browser suite.
+
 ## [0.1.8] - 2026-08-03
 
 ### Fixed
