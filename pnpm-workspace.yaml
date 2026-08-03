@@ -11,5 +11,5 @@ allowBuilds:
 
 overrides:
   find-my-way: 9.7.0
-  postcss: 8.5.18
+  postcss: 8.5.23
   sharp: 0.35.3
