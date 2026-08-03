@@ -5,6 +5,13 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-08-03
+
+### Fixed
+
+- Updated the closed-setup browser assertion to submit the now-required setup
+  token, allowing the test to reach and verify the permanent 409 closure.
+
 ## [0.1.6] - 2026-08-03
 
 ### Fixed
