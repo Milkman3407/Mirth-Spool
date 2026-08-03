@@ -17,7 +17,9 @@ export MIRTHSPOOL_SETUP_TOKEN="${MIRTHSPOOL_SETUP_TOKEN:-$(openssl rand -base64 
 export MIRTHSPOOL_TRUSTED_PROXY_SECRET="${MIRTHSPOOL_TRUSTED_PROXY_SECRET:-$(openssl rand -base64 32 | tr -d '\n')}"
 export MIRTHSPOOL_DATABASE_PASSWORD="${MIRTHSPOOL_DATABASE_PASSWORD:-release-acceptance-database-password}"
 export MIRTHSPOOL_HTTP_PORT="$http_port"
-export MIRTHSPOOL_PUBLIC_ORIGIN="http://127.0.0.1:${http_port}"
+# Model the external TLS-terminating proxy while the acceptance runner reaches
+# the container's loopback-published HTTP port directly.
+export MIRTHSPOOL_PUBLIC_ORIGIN="https://127.0.0.1:${http_port}"
 export MIRTHSPOOL_WEB_IMAGE="$web_image"
 export MIRTHSPOOL_WORKER_IMAGE="$worker_image"
 
@@ -28,7 +30,17 @@ compose() {
 cleanup() {
   compose down --volumes --remove-orphans >/dev/null 2>&1 || true
 }
-trap cleanup EXIT
+
+diagnose_failure() {
+  local exit_code=$?
+  if (( exit_code != 0 )); then
+    compose ps --all || true
+    compose logs --no-color --tail 200 web worker || true
+  fi
+  cleanup
+  exit "$exit_code"
+}
+trap diagnose_failure EXIT
 
 cd "$root_dir"
 cleanup
