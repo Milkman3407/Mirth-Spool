@@ -5,10 +5,26 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-08-03
+
 ### Added
 
 - Public iFunny `top-memes/day` ingestion with bounded HTML parsing, direct
   image/video normalization, source-management controls, and synthetic tests.
+
+### Security
+
+- Added one-time setup-token verification, bounded authentication JSON parsing,
+  per-IP login throttling, same-origin sign-out, strict production CSP/HSTS,
+  and signed trusted-proxy client-IP assertions.
+- Replaced broad private-network access flags with exact host/IP/CIDR
+  allowlists, redirect revalidation, IPv6 translation defenses, and fragment
+  rejection at outbound-fetch boundaries.
+- Hardened Docker build contexts and networking, required digest-qualified
+  release images, coalesced readiness probes, and added scheduled full-history
+  secret, CodeQL, dependency, and container scans.
+- Resolved CodeQL HTML filtering, entity decoding, service-worker origin, and
+  polynomial-time parsing findings.
 
 ## [0.1.3] - 2026-07-23
 
@@ -61,7 +77,8 @@ see [VERSIONING.md](VERSIONING.md).
   defenses, redacted diagnostics, dependency/secret/container scans, and
   authenticated administration surfaces.
 
-[Unreleased]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Milkman3407/Mirth-Spool/compare/v0.1.0...v0.1.1
