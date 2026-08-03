@@ -265,15 +265,16 @@ export function mastodonHtmlToPlainText(
       quote = character;
     } else if (character === ">") {
       insideTag = false;
-      const match = /^\s*(\/?)\s*([a-z0-9]+)/iu.exec(tag);
-      const name = match?.[2]?.toLowerCase();
+      const parsedTag = parseTagName(tag);
+      const name = parsedTag?.name;
       if (
         name === "script" ||
         name === "style" ||
         name === "svg" ||
         name === "math"
       ) {
-        if (match?.[1]) suppressedDepth = Math.max(0, suppressedDepth - 1);
+        if (parsedTag?.closing)
+          suppressedDepth = Math.max(0, suppressedDepth - 1);
         else if (!tag.trimEnd().endsWith("/>")) suppressedDepth += 1;
       }
       if (suppressedDepth === 0) withoutTags += " ";
@@ -291,6 +292,35 @@ export function mastodonHtmlToPlainText(
     .replace(/\s+/gu, " ")
     .trim();
   return cleaned ? cleaned.slice(0, maximum) : null;
+}
+
+function parseTagName(
+  tag: string,
+): { readonly closing: boolean; readonly name: string } | null {
+  let index = 0;
+  while (index < tag.length && isAsciiWhitespace(tag.charCodeAt(index)))
+    index += 1;
+  const closing = tag[index] === "/";
+  if (closing) index += 1;
+  while (index < tag.length && isAsciiWhitespace(tag.charCodeAt(index)))
+    index += 1;
+  const start = index;
+  while (index < tag.length) {
+    const code = tag.charCodeAt(index);
+    const alphaNumeric =
+      (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122);
+    if (!alphaNumeric) break;
+    index += 1;
+  }
+  return index === start
+    ? null
+    : { closing, name: tag.slice(start, index).toLowerCase() };
+}
+
+function isAsciiWhitespace(code: number): boolean {
+  return code === 32 || (code >= 9 && code <= 13);
 }
 
 function parseDate(value: string | null | undefined, fallback: Date): string {
