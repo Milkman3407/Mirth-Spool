@@ -145,6 +145,35 @@ describe("server configuration", () => {
       }),
     ).toThrow(ConfigurationError);
   });
+
+  it("allows the explicit insecure test escape hatch only for loopback", () => {
+    const base = {
+      DATABASE_URL:
+        "postgresql://user:strong-database-password-0001@postgres:5432/mirthspool",
+      MIRTHSPOOL_ALLOW_INSECURE_TEST_ORIGIN: "true",
+      NODE_ENV: "production",
+      REDIS_URL: "redis://redis:6379",
+    } as const;
+
+    expect(
+      parseServerConfig({
+        ...base,
+        MIRTHSPOOL_PUBLIC_ORIGIN: "http://127.0.0.1:53000",
+      }).client.publicOrigin,
+    ).toBe("http://127.0.0.1:53000");
+    expect(() =>
+      parseServerConfig({
+        ...base,
+        MIRTHSPOOL_PUBLIC_ORIGIN: "http://192.168.1.10:53000",
+      }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      parseServerConfig({
+        ...base,
+        MIRTHSPOOL_PUBLIC_ORIGIN: "http://mirthspool.example",
+      }),
+    ).toThrow(ConfigurationError);
+  });
 });
 
 describe("client configuration", () => {

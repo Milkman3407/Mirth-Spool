@@ -35,6 +35,7 @@ services:
       fixture-feed:
         condition: service_healthy
     environment:
+      MIRTHSPOOL_ALLOW_INSECURE_TEST_ORIGIN: "true"
       NODE_ENV: test
       MIRTHSPOOL_PRIVATE_SOURCE_ALLOWLIST: "e2e-fixture,127.0.0.1"
       MIRTHSPOOL_SOURCE_ALLOWED_PORTS: "8080"
