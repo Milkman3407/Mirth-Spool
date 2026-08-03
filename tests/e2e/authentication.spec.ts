@@ -71,13 +71,15 @@ test.describe.serial("private setup, sources, and feed", () => {
 
     await page.goto("/sources");
     await expectAccessible(page);
-    await page.getByLabel("Display name").first().fill("Fixture RSS feed");
-    await page
+    const rssForm = page.locator("form.source-form").filter({
+      has: page.getByLabel("Feed URL"),
+    });
+    await rssForm.getByLabel("Display name").fill("Fixture RSS feed");
+    await rssForm
       .getByLabel("Feed URL")
-      .first()
       .fill("http://fixture-feed:8080/feed.xml");
-    await page.getByLabel("Enabled").check();
-    await page.getByRole("button", { name: "Add source" }).click();
+    await rssForm.getByLabel("Enabled").check();
+    await rssForm.getByRole("button", { name: "Add source" }).click();
     const source = page.locator("article.source-card");
     await expect(source).toContainText("Fixture RSS feed");
     await source.getByRole("button", { name: "Refresh now" }).click();
@@ -101,12 +103,11 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(page.getByRole("status")).toContainText(
       "Connected to E2E fixture feed",
     );
-    await page.getByLabel("Display name").first().fill("Failing fixture feed");
-    await page
+    await rssForm.getByLabel("Display name").fill("Failing fixture feed");
+    await rssForm
       .getByLabel("Feed URL")
-      .first()
       .fill("http://fixture-failure:8080/controlled.xml");
-    await page.getByRole("button", { name: "Add source" }).click();
+    await rssForm.getByRole("button", { name: "Add source" }).click();
     let failingSource = page
       .locator("article.source-card")
       .filter({ hasText: "Failing fixture feed" });

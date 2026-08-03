@@ -5,6 +5,13 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-08-03
+
+### Fixed
+
+- Scoped RSS browser-test controls to the RSS form after the iFunny source form
+  introduced additional controls with the same accessible names.
+
 ## [0.1.7] - 2026-08-03
 
 ### Fixed

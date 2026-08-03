@@ -36,7 +36,7 @@ jobs:
         run: pnpm check:repository-safety
       - name: Verify release metadata
         env:
-          MIRTHSPOOL_RELEASE_TAG: v0.1.7
+          MIRTHSPOOL_RELEASE_TAG: v0.1.8
         run: pnpm release:verify
       - name: Lint
         run: pnpm lint
