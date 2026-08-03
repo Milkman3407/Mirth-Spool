@@ -49,7 +49,7 @@ test.describe.serial("private setup, sources, and feed", () => {
     await expect(status).toBeOK();
     await expect(status.json()).resolves.toMatchObject({ open: false });
     const closed = await request.post("/api/setup", {
-      data: administrator,
+      data: { ...administrator, setupToken },
       headers: { origin: "http://127.0.0.1:53000" },
     });
     expect(closed.status()).toBe(409);
