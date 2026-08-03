@@ -5,6 +5,13 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-08-03
+
+### Security
+
+- Raised the PostCSS override to 8.5.23 after GHSA-fxqj-rqcc-2cmp disclosed a
+  source-map path traversal in versions through 8.5.22.
+
 ## [0.1.10] - 2026-08-03
 
 ### Fixed
