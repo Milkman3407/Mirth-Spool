@@ -27,6 +27,9 @@ const serverEnvironmentSchema = z.object({
     .min(100)
     .max(5_000)
     .default(1_000),
+  MIRTHSPOOL_ALLOW_INSECURE_TEST_ORIGIN: z
+    .enum(["false", "true"])
+    .default("false"),
   MIRTHSPOOL_COMPLETED_JOB_RETENTION_SECONDS: z.coerce
     .number()
     .int()
@@ -195,7 +198,11 @@ export function parseServerConfig(environment: unknown): ServerConfig {
 
   if (parsed.data.NODE_ENV === "production") {
     const origin = new URL(parsed.data.MIRTHSPOOL_PUBLIC_ORIGIN);
-    if (origin.protocol !== "https:") {
+    const testLoopbackAllowed =
+      parsed.data.MIRTHSPOOL_ALLOW_INSECURE_TEST_ORIGIN === "true" &&
+      origin.protocol === "http:" &&
+      ["127.0.0.1", "::1", "localhost"].includes(origin.hostname);
+    if (origin.protocol !== "https:" && !testLoopbackAllowed) {
       throw new ConfigurationError(["MIRTHSPOOL_PUBLIC_ORIGIN"]);
     }
   }

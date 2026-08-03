@@ -5,6 +5,14 @@ see [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-03
+
+### Fixed
+
+- Added an explicit test-only HTTP origin escape hatch restricted to exact
+  loopback hosts, allowing browser tests to exercise production-built images
+  without weakening the default production HTTPS requirement.
+
 ## [0.1.5] - 2026-08-03
 
 ### Fixed
