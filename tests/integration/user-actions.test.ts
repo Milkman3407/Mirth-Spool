@@ -24,7 +24,7 @@ import {
 } from "../../apps/web/src/lib/library/library-service.js";
 
 const origin = "http://localhost:3000";
-const secret = "integration-only-auth-secret-with-32-characters";
+const secret = process.env.MIRTHSPOOL_AUTH_SECRET!;
 const database = createDatabaseClient({
   connectionString: process.env.DATABASE_URL!,
   maxConnections: 8,

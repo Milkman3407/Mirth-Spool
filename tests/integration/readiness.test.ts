@@ -7,9 +7,8 @@ import { evaluateReadiness } from "@mirthspool/shared";
 import { LocalFilesystemStorage } from "@mirthspool/storage";
 import { afterEach, describe, expect, it } from "vitest";
 
-const databaseUrl =
-  "postgresql://mirthspool:mirthspool-integration-only-password@127.0.0.1:55432/mirthspool";
-const redisUrl = "redis://127.0.0.1:56379";
+const databaseUrl = process.env.DATABASE_URL!;
+const redisUrl = process.env.REDIS_URL!;
 const children = new Set<ChildProcess>();
 
 afterEach(() => {
