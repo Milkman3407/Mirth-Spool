@@ -17,7 +17,7 @@
     "@mirthspool/redis": "workspace:*",
     "@mirthspool/shared": "workspace:*",
     "@mirthspool/storage": "workspace:*",
-    "better-auth": "1.6.23",
+    "better-auth": "1.7.7",
     "next": "16.2.11",
     "react": "19.2.7",
     "react-dom": "19.2.7",
